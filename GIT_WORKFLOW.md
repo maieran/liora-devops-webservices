@@ -16,6 +16,26 @@ For our group specific tasks we use a simple feature branch workflow.
 
 - `practice/...`: personal learning branches. These are optional and are not part of the official project workflow.
 
+
+### Branch Protection Rules
+
+Branch protection rules are enabled for the shared branches main and dev.
+
+For these branches, the followin rules apply:
+- Direct pushes are not allowed.
+- Changes must be added through Pull Request (PR).
+- At least one team member must review and approae the PR.
+- Ongoing conversations resulting from PR review must be resolved before merging.
+- Force pushes are not allowed.
+- Branch deletion is not allowed
+
+The `main` branch has the strictest protection because it represents the stables version of the project.
+
+Task branches such as `feature/...`, `fix/...`, `docs/...`, and `practice/...`are not protected. 
+They are used for development, bug fixes, documentation, or personal learning. 
+Official task branches are merged into dev through a Pull Request after review.
+
+
 ### Workflow
 
 
@@ -40,7 +60,7 @@ For our group specific tasks we use a simple feature branch workflow.
    git push -u origin feature/docker-setup
    ```
 
-3. Open Pull Request (PR) from the feature branch into `dev``.   
+3. Open PR from the feature branch into `dev``.   
 
    Example:
 
