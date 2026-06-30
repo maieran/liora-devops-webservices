@@ -1,0 +1,94 @@
+
+name: liora-webservices-dev
+services:
+
+  nginx:
+    image: andrem43/nginx-proxy:latest
+    ports:
+      - 8080
+    depends_on:
+      - wordpress
+      - prestashop
+    networks:
+      - liora-proxy-network
+    restart: on-failure:3
+
+  wordpress-db:
+    image: andrem43/wordpress-db:latest
+    container_name: wordpress-db
+    environment:
+      MARIADB_DATABASE: wordpress_dev
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - liora-wordpress-db-data:/var/lib/mysql
+    networks:
+      - liora-wordpress-network #maybe one network?
+    restart: on-failure:2
+  
+    wordpress:
+      image: andrem43/wordpress:latest
+      container_name: wordpress
+      environment:
+        WORDPRESS_DB_HOST=wordpress-db:3306 
+        WORDPRESS_DB_NAME=wordpress_dev
+        WORDPRESS_DB_USER=wordpress
+        WORDPRESS_DB_PASSWORD=wordpress
+      depends_on:
+        - wordpress_db
+      volumes:
+        - liora-wordpress-files:/var/www/html
+      networks:
+        - liora-proxy-network
+        - liora-wordpress-network
+      restart: on-failure:2
+    
+    prestashop-db:
+      image: andrem43/prestashop-db:latest
+      container_name: prestashop-db
+      environment:
+        MYSQL_DATABASE: prestashop_dev
+        MYSQL_USER: prestashop
+        MYSQL_PASSWORD: prestashop
+        MYSQL_ROOT_PASSWORD: root
+      volumes:
+        - liora-prestashop-db-data:/var/lib/mysql
+      networks:
+        - liora-prestashop-network
+      restart: on-failure:2
+
+    prestashop:
+      image: andrem43/prestashop:latest
+      container_name: prestashop
+      environment:
+        DB_SERVER: prestashop-db
+        DB_NAME: prestashop_dev
+        DB_USER: prestashop
+        DB_PASSWD: prestashop
+        PS_INSTALL_AUTO: 1
+        PS_DOMAIN: localhost:8080
+      depends_on:
+        - prestashop-db
+      volumes:
+        - liora-prestashop-files:/var/www/html
+      networks:
+        - liora-proxy-network
+        - liora-prestashop-network
+      restart: on-failure:2
+
+  volumes:
+    liora-wordpress-db-data:
+    liora-wordpress-files:
+    liora-prestashop-db-data:
+    liora-prestashop-files:
+    
+  networks:
+    liora-proxy-network:
+      driver: bridge
+      
+    liora-wordpress-network:
+      driver: bridge
+      
+    liora-prestashop-network:
+      driver: bridge
