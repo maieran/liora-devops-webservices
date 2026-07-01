@@ -31,10 +31,10 @@ services:
       image: andrem43/wordpress:latest
       container_name: wordpress
       environment:
-        WORDPRESS_DB_HOST=wordpress-db:3306 
-        WORDPRESS_DB_NAME=wordpress_dev
-        WORDPRESS_DB_USER=wordpress
-        WORDPRESS_DB_PASSWORD=wordpress
+        WORDPRESS_DB_HOST: wordpress-db:3306 
+        WORDPRESS_DB_NAME: wordpress_dev
+        WORDPRESS_DB_USER: wordpress
+        WORDPRESS_DB_PASSWORD: wordpress
       depends_on:
         - wordpress_db
       volumes:
