@@ -1,0 +1,80 @@
+services:
+  nginx:
+    build:
+      context: ./docker-setup/nginx
+    container_name: liora-nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      - wordpress
+      - prestashop
+    networks:
+      - webservices-network
+
+  wordpress:
+    build:
+      context: ./docker-setup/wordpress
+    container_name: liora-wordpress
+    environment:
+      WORDPRESS_DB_HOST: wordpress-db:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME', 'http://localhost:8080/wordpress');
+        define('WP_SITEURL', 'http://localhost:8080/wordpress');
+    depends_on:
+      - wordpress-db
+    networks:
+      - webservices-network
+
+  wordpress-db:
+    image: mysql:8.0
+    container_name: liora-wordpress-db
+    environment:
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+    volumes:
+      - wordpress-db-data:/var/lib/mysql
+    networks:
+      - webservices-network
+
+  prestashop:
+    build:
+      context: ./docker-setup/prestashop
+    container_name: liora-prestashop
+    environment:
+      DB_SERVER: prestashop-db
+      DB_NAME: ${PRESTASHOP_DB_NAME}
+      DB_USER: ${PRESTASHOP_DB_USER}
+      DB_PASSWD: ${PRESTASHOP_DB_PASSWORD}
+      PS_INSTALL_AUTO: 1
+      PS_DOMAIN: localhost:8080
+      PS_DEV_MODE: 1
+    depends_on:
+      - prestashop-db
+    networks:
+      - webservices-network
+
+  prestashop-db:
+    image: mysql:8.0
+    container_name: liora-prestashop-db
+    environment:
+      MYSQL_DATABASE: ${PRESTASHOP_DB_NAME}
+      MYSQL_USER: ${PRESTASHOP_DB_USER}
+      MYSQL_PASSWORD: ${PRESTASHOP_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${PRESTASHOP_DB_ROOT_PASSWORD}
+    volumes:
+      - prestashop-db-data:/var/lib/mysql
+    networks:
+      - webservices-network
+
+networks:
+  webservices-network:
+    driver: bridge
+
+volumes:
+  wordpress-db-data:
+  prestashop-db-data:
