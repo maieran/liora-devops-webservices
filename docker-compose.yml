@@ -24,7 +24,8 @@ services:
         define('WP_HOME', 'http://localhost:8080/wordpress');
         define('WP_SITEURL', 'http://localhost:8080/wordpress');
     depends_on:
-      - wordpress-db
+      wordpress-db:
+        condition: service_healthy
     networks:
       - webservices-network
 
@@ -40,6 +41,16 @@ services:
       - wordpress-db-data:/var/lib/mysql
     networks:
       - webservices-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   prestashop:
     build:
@@ -54,7 +65,8 @@ services:
       PS_DOMAIN: localhost:8080
       PS_DEV_MODE: 1
     depends_on:
-      - prestashop-db
+      prestashop-db:
+        condition: service_healthy
     networks:
       - webservices-network
 
@@ -70,6 +82,16 @@ services:
       - prestashop-db-data:/var/lib/mysql
     networks:
       - webservices-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 networks:
   webservices-network:
