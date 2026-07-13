@@ -1,0 +1,19 @@
+services:
+  wordpress:
+    environment:
+      WORDPRESS_DEBUG: "0"
+    restart: unless-stopped
+
+  prestashop:
+    environment:
+      PS_DEV_MODE: "0"
+    restart: unless-stopped
+
+  nginx:
+    restart: unless-stopped
+
+  wordpress-db:
+    restart: unless-stopped
+
+  prestashop-db:
+    restart: unless-stopped
