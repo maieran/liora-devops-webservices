@@ -1,0 +1,8 @@
+services:
+  wordpress:
+    environment:
+      WORDPRESS_DEBUG: "1"
+
+  prestashop:
+    environment:
+      PS_DEV_MODE: "1"
