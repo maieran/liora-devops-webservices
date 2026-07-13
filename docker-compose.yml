@@ -6,10 +6,18 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - wordpress
-      - prestashop
+      wordpress:
+        condition: service_healthy
+      prestashop:
+        condition: service_healthy
     networks:
       - webservices-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s  
 
   wordpress:
     build:
@@ -28,6 +36,12 @@ services:
         condition: service_healthy
     networks:
       - webservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/ > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s  
 
   wordpress-db:
     image: mysql:8.0
@@ -69,6 +83,12 @@ services:
         condition: service_healthy
     networks:
       - webservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/ > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s  
 
   prestashop-db:
     image: mysql:8.0
