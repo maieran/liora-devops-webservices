@@ -1,0 +1,119 @@
+name: liora-webservices-prod
+
+services:
+
+  nginx:
+    build:
+      context: ./nginx
+    image: liora-nginx-proxy:prod
+    ports:
+      - "${NGINX_PORT}:80"
+    depends_on:
+      - wordpress
+      - prestashop
+    networks:
+      - liora-prod-proxy-network
+    restart: always
+
+  wordpress-db:
+    build:
+      context: ./wordpress-db
+    image: liora-wordpress-db:prod
+    environment:
+      MARIADB_DATABASE: ${WORDPRESS_DB_NAME}
+      MARIADB_USER: ${WORDPRESS_DB_USER}
+      MARIADB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+    volumes:
+      - liora-prod-wordpress-db-data:/var/lib/mysql
+    networks:
+      - liora-prod-wordpress-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
+    
+  wordpress:
+    build:
+      context: ./wordpress
+    image: liora-wordpress:prod
+    environment:
+        WORDPRESS_DB_HOST: wordpress-db:3306
+        WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+        WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+        WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+        WORDPRESS_CONFIG_EXTRA: |
+          define('WP_HOME', 'http://${WORDPRESS_PUBLIC_HOST}/wordpress');
+          define('WP_SITEURL', 'http://${WORDPRESS_PUBLIC_HOST}/wordpress');
+    depends_on:
+      wordpress-db:
+        condition: service_healthy
+    volumes:
+      - liora-prod-wordpress-files:/var/www/html
+    networks:
+      - liora-prod-proxy-network
+      - liora-prod-wordpress-network
+    restart: always
+
+  prestashop-db:
+    build:
+      context: ./prestashop-db
+    image: liora-prestashop-db:prod
+    environment:
+      MYSQL_DATABASE: ${PRESTASHOP_DB_NAME}
+      MYSQL_USER: ${PRESTASHOP_DB_USER}
+      MYSQL_PASSWORD: ${PRESTASHOP_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${PRESTASHOP_DB_ROOT_PASSWORD}
+    volumes:
+      - liora-prod-prestashop-db-data:/var/lib/mysql
+    networks:
+      - liora-prod-prestashop-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: always
+
+  prestashop:
+    build:
+      context: ./prestashop
+    image: liora-prestashop:prod
+    environment:
+      DB_SERVER: prestashop-db
+      DB_NAME: ${PRESTASHOP_DB_NAME}
+      DB_USER: ${PRESTASHOP_DB_USER}
+      DB_PASSWD: ${PRESTASHOP_DB_PASSWORD}
+      PS_INSTALL_AUTO: 1
+      PS_DOMAIN: ${PRESTASHOP_PUBLIC_HOST}
+    depends_on:
+      prestashop-db:
+        condition: service_healthy
+    volumes:
+      - liora-prod-prestashop-files:/var/www/html
+    networks:
+      - liora-prod-proxy-network
+      - liora-prod-prestashop-network
+    restart: always
+
+volumes:
+  liora-prod-prestashop-files:
+  liora-prod-wordpress-db-data:
+  liora-prod-prestashop-db-data:
+  liora-prod-wordpress-files:
+
+networks:
+  liora-prod-proxy-network:
+    driver: bridge
+  
+  liora-prod-wordpress-network:
+    driver: bridge
+    internal: true
+  
+  liora-prod-prestashop-network:
+    driver: bridge
+    internal: true
