@@ -21,10 +21,10 @@ check_route() {
 
     case "$status" in
         200|301|302)
-            echo "✅ $name passed with HTTP $status"
+            echo "$name passed with HTTP $status"
             ;;
         *)
-            echo "❌ $name failed with HTTP $status"
+            echo "$name failed with HTTP $status"
             FAILED=1
             ;;
     esac
@@ -32,13 +32,13 @@ check_route() {
     echo
 }
 
-check_route "Nginx" "/"
+check_route "Nginx" "/health"
 check_route "WordPress" "/wordpress/"
 check_route "PrestaShop" "/prestashop/"
 
 if [ "$FAILED" -ne 0 ]; then
-    echo "❌ One or more smoke tests failed."
+    echo "One or more smoke tests failed."
     exit 1
 fi
 
-echo "✅ All smoke tests passed."
+echo "All smoke tests passed."

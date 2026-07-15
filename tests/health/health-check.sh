@@ -12,17 +12,17 @@ check_url() {
 
     echo "Checking $service_name..."
 
-    if curl -fsS "$url" > /dev/null; then
-        echo "✅ $service_name is healthy"
+    if curl -fLsS "$url" > /dev/null; then
+        echo "$service_name is healthy"
     else
-        echo "❌ $service_name health check failed: $url"
+        echo "$service_name health check failed: $url"
         exit 1
     fi
 }
 
-check_url "Nginx" "$BASE_URL/"
+check_url "Nginx" "$BASE_URL/health"
 check_url "WordPress" "$BASE_URL/wordpress/"
 check_url "PrestaShop" "$BASE_URL/prestashop/"
 
 echo
-echo "✅ All health checks completed successfully."
+echo "All health checks completed successfully."
