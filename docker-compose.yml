@@ -13,7 +13,7 @@ services:
     networks:
       - frontend-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,29 +23,59 @@ services:
     build:
       context: ./docker-setup/wordpress
     container_name: liora-wordpress
+
     environment:
       WORDPRESS_DB_HOST: wordpress-db:3306
       WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
       WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
       WORDPRESS_DEBUG: "1"
-      WP_HOME: ${WP_HOME}
-      WP_SITEURL: ${WP_SITEURL}
+
       WORDPRESS_CONFIG_EXTRA: |
-        define('WP_HOME', getenv('WP_HOME'));
-        define('WP_SITEURL', getenv('WP_SITEURL'));
+        if (
+            isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) &&
+            $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'
+        ) {
+            $$_SERVER['HTTPS'] = 'on';
+        }
+
+        $$scheme = (
+            !empty($$_SERVER['HTTPS']) &&
+            $$_SERVER['HTTPS'] !== 'off'
+        ) ? 'https' : 'http';
+
+        $$host = $$_SERVER['HTTP_X_FORWARDED_HOST']
+            ?? $$_SERVER['HTTP_HOST']
+            ?? 'localhost';
+
+        define(
+            'WP_HOME',
+            $$scheme . '://' . $$host . '/wordpress'
+        );
+
+        define(
+            'WP_SITEURL',
+            $$scheme . '://' . $$host . '/wordpress'
+        );
+
     depends_on:
       wordpress-db:
         condition: service_healthy
+
     networks:
-       - frontend-network
-       - wordpress-network
+      - frontend-network
+      - wordpress-network
+
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/ > /dev/null"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1/ > /dev/null"
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 40s  
+      start_period: 40s 
 
   wordpress-db:
     image: mysql:8.0
@@ -80,16 +110,15 @@ services:
       DB_USER: ${PRESTASHOP_DB_USER}
       DB_PASSWD: ${PRESTASHOP_DB_PASSWORD}
       PS_INSTALL_AUTO: "1"
-      PS_DOMAIN: ${PS_DOMAIN}
+      PS_DOMAIN: ${SERVER_HOST}
       PS_DEV_MODE: "1"
     depends_on:
       prestashop-db:
         condition: service_healthy
     networks:
       - frontend-network
-      - prestashop-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/ > /dev/null"]
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 80) ? 0 : 1);'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -106,7 +135,7 @@ services:
     volumes:
       - prestashop-db-data:/var/lib/mysql
     networks:
-      - prestashop-network
+      - frontend-network
     healthcheck:
       test:
         [
@@ -123,9 +152,6 @@ networks:
     driver: bridge
 
   wordpress-network:
-    driver: bridge
-
-  prestashop-network:
     driver: bridge
 
 volumes:
