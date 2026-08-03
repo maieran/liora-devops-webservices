@@ -30,14 +30,17 @@ pipeline {
                     file(credentialsId: 'liora-env-file', variable: 'ENV_FILE')
                 ]) {
                     sh '''
-                        cp "$ENV_FILE" .env
+                        rm -f .env.ci
+
+                        install -m 600 "$ENV_FILE" .env.ci
 
                         CURRENT_IP="$(curl -fsS https://checkip.amazonaws.com | tr -d '\\n')"
 
-                        sed -i '/^SERVER_HOST=/d' .env
-                        echo "SERVER_HOST=${CURRENT_IP}:8080" >> .env
+                        sed -i '/^SERVER_HOST=/d' .env.ci
+                        echo "SERVER_HOST=${CURRENT_IP}:8080" >> .env.ci
 
-                        echo "Environment prepared for current VM IP."
+                        echo "Environment prepared for the current VM."
+                        grep '^SERVER_HOST=' .env.ci
                     '''
                 }
             }
@@ -46,8 +49,11 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 echo 'Building WordPress, PrestaShop and NGINX Docker images...'
-                sh 'docker compose build'
-                sh 'docker compose config --images'
+
+                sh '''
+                    docker compose --env-file .env.ci build
+                    docker compose --env-file .env.ci config --images
+                '''
             }
         }
 
@@ -56,9 +62,9 @@ pipeline {
                 echo 'Running project tests...'
                 sh '''
                     chmod +x tests/run-tests.sh
-
+                    chmod +x tests/health/health-check.sh
+                    chmod +x tests/smoke/smoke-test.sh
                     SERVER_HOST="$(grep '^SERVER_HOST=' .env | cut -d= -f2-)"
-
                     BASE_URL="http://${SERVER_HOST}" ./tests/run-tests.sh
                 '''
             }
@@ -85,12 +91,12 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 sh '''
-                    docker compose push
+                    docker compose --env-file .env.ci push
                 '''
             }
         }
 
-        stage('Deploy Dev') {
+       stage('Deploy Dev') {
             when {
                 expression {
                     env.GIT_BRANCH == 'origin/feature/jenkins-cicd' ||
@@ -100,16 +106,18 @@ pipeline {
 
             steps {
                 sh '''
-                    docker compose config --images
-                    docker compose pull nginx wordpress prestashop
+                    docker compose --env-file .env.ci config --images
 
-                    docker compose up -d \
+                    docker compose --env-file .env.ci \
+                        pull nginx wordpress prestashop
+
+                    docker compose --env-file .env.ci up -d \
                         --no-build \
                         --remove-orphans \
                         --wait \
                         --wait-timeout 180
 
-                    docker compose ps
+                    docker compose --env-file .env.ci ps
                 '''
             }
         }
