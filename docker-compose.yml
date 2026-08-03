@@ -1,0 +1,159 @@
+services:
+  nginx:
+    build:
+      context: ./docker-setup/nginx
+    container_name: liora-nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      wordpress:
+        condition: service_healthy
+      prestashop:
+        condition: service_healthy
+    networks:
+      - frontend-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s  
+
+  wordpress:
+    build:
+      context: ./docker-setup/wordpress
+    container_name: liora-wordpress
+
+    environment:
+      WORDPRESS_DB_HOST: wordpress-db:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_DEBUG: "1"
+
+      WORDPRESS_CONFIG_EXTRA: |
+        if (
+            isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) &&
+            $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'
+        ) {
+            $$_SERVER['HTTPS'] = 'on';
+        }
+
+        $$scheme = (
+            !empty($$_SERVER['HTTPS']) &&
+            $$_SERVER['HTTPS'] !== 'off'
+        ) ? 'https' : 'http';
+
+        $$host = $$_SERVER['HTTP_X_FORWARDED_HOST']
+            ?? $$_SERVER['HTTP_HOST']
+            ?? 'localhost';
+
+        define(
+            'WP_HOME',
+            $$scheme . '://' . $$host . '/wordpress'
+        );
+
+        define(
+            'WP_SITEURL',
+            $$scheme . '://' . $$host . '/wordpress'
+        );
+
+    depends_on:
+      wordpress-db:
+        condition: service_healthy
+
+    networks:
+      - frontend-network
+      - wordpress-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1/ > /dev/null"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s 
+
+  wordpress-db:
+    image: mysql:8.0
+    container_name: liora-wordpress-db
+    environment:
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+    volumes:
+      - wordpress-db-data:/var/lib/mysql
+    networks:
+      - wordpress-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  prestashop:
+    build:
+      context: ./docker-setup/prestashop
+    container_name: liora-prestashop
+    environment:
+      DB_SERVER: prestashop-db
+      DB_NAME: ${PRESTASHOP_DB_NAME}
+      DB_USER: ${PRESTASHOP_DB_USER}
+      DB_PASSWD: ${PRESTASHOP_DB_PASSWORD}
+      PS_INSTALL_AUTO: "1"
+      PS_DOMAIN: ${SERVER_HOST}
+      PS_DEV_MODE: "1"
+    depends_on:
+      prestashop-db:
+        condition: service_healthy
+    networks:
+      - frontend-network
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 80) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s  
+
+  prestashop-db:
+    image: mysql:8.0.42
+    container_name: liora-prestashop-db
+    environment:
+      MYSQL_DATABASE: ${PRESTASHOP_DB_NAME}
+      MYSQL_USER: ${PRESTASHOP_DB_USER}
+      MYSQL_PASSWORD: ${PRESTASHOP_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${PRESTASHOP_DB_ROOT_PASSWORD}
+    volumes:
+      - prestashop-db-data:/var/lib/mysql
+    networks:
+      - frontend-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  frontend-network:
+    driver: bridge
+
+  wordpress-network:
+    driver: bridge
+
+volumes:
+  wordpress-db-data:
+  prestashop-db-data:
