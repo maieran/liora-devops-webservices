@@ -67,23 +67,27 @@ pipeline {
 
         stage('Deploy Dev') {
             steps {
-                echo "Deploying Docker images with tag: ${IMAGE_TAG}"
 
-                sh '''
-                    echo "Pulling images with tag: $IMAGE_TAG"
+                withCredentials([
+                    file(credentialsId: 'liora-env-file', variable: 'ENV_FILE')
+                ]) {
 
-                    docker compose config --images
+                    sh '''
+                        cp "$ENV_FILE" .env
+                    '''
 
-                    docker compose pull nginx wordpress prestashop
+                    sh '''
+                        docker compose pull nginx wordpress prestashop
 
-                    docker compose up -d \
-                    --no-build \
-                    --remove-orphans \
-                    --wait \
-                    --wait-timeout 180
+                        docker compose up -d \
+                            --no-build \
+                            --remove-orphans \
+                            --wait \
+                            --wait-timeout 180
 
-                    docker compose ps
-                '''
+                        docker compose ps
+                    '''
+                }
             }
         }
 
