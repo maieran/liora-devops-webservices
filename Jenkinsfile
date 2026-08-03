@@ -68,22 +68,26 @@ pipeline {
         }
 
         stage('Deploy Dev') {
-              when {
+            when {
                 expression {
                     env.GIT_BRANCH == 'origin/feature/jenkins-cicd' ||
                     env.GIT_BRANCH == 'origin/main'
                 }
             }
+
             steps {
                 withCredentials([
                     file(credentialsId: 'liora-env-file', variable: 'ENV_FILE')
                 ]) {
-
                     sh '''
                         cp "$ENV_FILE" .env
-                    '''
 
-                    sh '''
+                        CURRENT_IP="$(curl -fsS https://checkip.amazonaws.com | tr -d '\\n')"
+                        sed -i '/^SERVER_HOST=/d' .env
+                        echo "SERVER_HOST=${CURRENT_IP}:8080" >> .env
+
+                        docker compose config --images
+
                         docker compose pull nginx wordpress prestashop
 
                         docker compose up -d \
@@ -97,8 +101,6 @@ pipeline {
                 }
             }
         }
-
-        
 
     }
 }
