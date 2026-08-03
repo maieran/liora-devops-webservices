@@ -24,6 +24,24 @@ pipeline {
                 sh 'echo "Build number: $BUILD_NUMBER"'
             }
         }
+        stage('Prepare Environment') {
+            steps {
+                withCredentials([
+                    file(credentialsId: 'liora-env-file', variable: 'ENV_FILE')
+                ]) {
+                    sh '''
+                        cp "$ENV_FILE" .env
+
+                        CURRENT_IP="$(curl -fsS https://checkip.amazonaws.com | tr -d '\\n')"
+
+                        sed -i '/^SERVER_HOST=/d' .env
+                        echo "SERVER_HOST=${CURRENT_IP}:8080" >> .env
+
+                        echo "Environment prepared for current VM IP."
+                    '''
+                }
+            }
+        }
 
         stage('Build Docker Images') {
             steps {
@@ -36,8 +54,13 @@ pipeline {
         stage('Run Tests') {
             steps {
                 echo 'Running project tests...'
-                sh 'chmod +x tests/run-tests.sh'
-                sh './tests/run-tests.sh'
+                sh '''
+                    chmod +x tests/run-tests.sh
+
+                    SERVER_HOST="$(grep '^SERVER_HOST=' .env | cut -d= -f2-)"
+
+                    BASE_URL="http://${SERVER_HOST}" ./tests/run-tests.sh
+                '''
             }
         }
 
@@ -76,29 +99,18 @@ pipeline {
             }
 
             steps {
-                withCredentials([
-                    file(credentialsId: 'liora-env-file', variable: 'ENV_FILE')
-                ]) {
-                    sh '''
-                        cp "$ENV_FILE" .env
+                sh '''
+                    docker compose config --images
+                    docker compose pull nginx wordpress prestashop
 
-                        CURRENT_IP="$(curl -fsS https://checkip.amazonaws.com | tr -d '\\n')"
-                        sed -i '/^SERVER_HOST=/d' .env
-                        echo "SERVER_HOST=${CURRENT_IP}:8080" >> .env
+                    docker compose up -d \
+                        --no-build \
+                        --remove-orphans \
+                        --wait \
+                        --wait-timeout 180
 
-                        docker compose config --images
-
-                        docker compose pull nginx wordpress prestashop
-
-                        docker compose up -d \
-                            --no-build \
-                            --remove-orphans \
-                            --wait \
-                            --wait-timeout 180
-
-                        docker compose ps
-                    '''
-                }
+                    docker compose ps
+                '''
             }
         }
 
