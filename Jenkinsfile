@@ -20,6 +20,8 @@ pipeline {
                 sh 'ls -la'
                 sh 'docker --version'
                 sh 'docker compose version'
+                sh 'echo "Git branch: $GIT_BRANCH"'
+                sh 'echo "Build number: $BUILD_NUMBER"'
             }
         }
 
@@ -66,8 +68,13 @@ pipeline {
         }
 
         stage('Deploy Dev') {
+              when {
+                expression {
+                    env.GIT_BRANCH == 'origin/feature/jenkins-cicd' ||
+                    env.GIT_BRANCH == 'origin/main'
+                }
+            }
             steps {
-
                 withCredentials([
                     file(credentialsId: 'liora-env-file', variable: 'ENV_FILE')
                 ]) {
@@ -90,6 +97,8 @@ pipeline {
                 }
             }
         }
+
+        
 
     }
 }
