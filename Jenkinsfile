@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+     environment {
+        DOCKERHUB_USERNAME = 'shabbyalaei'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Pipeline Check') {
@@ -22,6 +27,7 @@ pipeline {
             steps {
                 echo 'Building WordPress, PrestaShop and NGINX Docker images...'
                 sh 'docker compose build'
+                sh 'docker compose config --images'
             }
         }
 
@@ -30,6 +36,32 @@ pipeline {
                 echo 'Running project tests...'
                 sh 'chmod +x tests/run-tests.sh'
                 sh './tests/run-tests.sh'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'liora-dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_TOKEN" | docker login \
+                        -u "$DOCKER_USER" \
+                        --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                sh '''
+                    docker compose push
+                '''
             }
         }
 

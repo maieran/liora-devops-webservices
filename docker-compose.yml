@@ -2,6 +2,7 @@ services:
   nginx:
     build:
       context: ./docker-setup/nginx
+    image: ${DOCKERHUB_USERNAME:-shabbyalaei}/liora-nginx:${IMAGE_TAG:-latest}
     container_name: liora-nginx
     ports:
       - "8080:80"
@@ -22,6 +23,7 @@ services:
   wordpress:
     build:
       context: ./docker-setup/wordpress
+    image: ${DOCKERHUB_USERNAME:-shabbyalaei}/liora-wordpress:${IMAGE_TAG:-latest}
     container_name: liora-wordpress
 
     environment:
@@ -103,6 +105,7 @@ services:
   prestashop:
     build:
       context: ./docker-setup/prestashop
+    image: ${DOCKERHUB_USERNAME:-shabbyalaei}/liora-prestashop:${IMAGE_TAG:-latest}
     container_name: liora-prestashop
     environment:
       DB_SERVER: prestashop-db
