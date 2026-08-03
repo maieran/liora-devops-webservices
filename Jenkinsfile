@@ -25,5 +25,13 @@ pipeline {
             }
         }
 
+        stage('Run Tests') {
+            steps {
+                echo 'Running project tests...'
+                sh 'chmod +x tests/run-tests.sh'
+                sh './tests/run-tests.sh'
+            }
+        }
+
     }
 }
