@@ -3,9 +3,8 @@ services:
     build:
       context: ./docker-setup/nginx
     image: ${DOCKERHUB_USERNAME:-shabbyalaei}/liora-nginx:${IMAGE_TAG:-latest}
-    container_name: liora-nginx
     ports:
-      - "8080:80"
+      - "${APP_PORT:-8080}:80"
     depends_on:
       wordpress:
         condition: service_healthy
@@ -24,7 +23,6 @@ services:
     build:
       context: ./docker-setup/wordpress
     image: ${DOCKERHUB_USERNAME:-shabbyalaei}/liora-wordpress:${IMAGE_TAG:-latest}
-    container_name: liora-wordpress
 
     environment:
       WORDPRESS_DB_HOST: wordpress-db:3306
@@ -81,7 +79,6 @@ services:
 
   wordpress-db:
     image: mysql:8.0
-    container_name: liora-wordpress-db
     environment:
       MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
       MYSQL_USER: ${WORDPRESS_DB_USER}
@@ -106,7 +103,6 @@ services:
     build:
       context: ./docker-setup/prestashop
     image: ${DOCKERHUB_USERNAME:-shabbyalaei}/liora-prestashop:${IMAGE_TAG:-latest}
-    container_name: liora-prestashop
     environment:
       DB_SERVER: prestashop-db
       DB_NAME: ${PRESTASHOP_DB_NAME}
@@ -129,7 +125,6 @@ services:
 
   prestashop-db:
     image: mysql:8.0.42
-    container_name: liora-prestashop-db
     environment:
       MYSQL_DATABASE: ${PRESTASHOP_DB_NAME}
       MYSQL_USER: ${PRESTASHOP_DB_USER}
