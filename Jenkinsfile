@@ -18,5 +18,12 @@ pipeline {
             }
         }
 
+        stage('Build Docker Images') {
+            steps {
+                echo 'Building WordPress, PrestaShop and NGINX Docker images...'
+                sh 'docker compose build'
+            }
+        }
+
     }
 }
