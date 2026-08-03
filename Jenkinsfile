@@ -60,11 +60,21 @@ pipeline {
         stage('Run Tests') {
             steps {
                 echo 'Running project tests...'
+
                 sh '''
                     chmod +x tests/run-tests.sh
                     chmod +x tests/health/health-check.sh
                     chmod +x tests/smoke/smoke-test.sh
-                    SERVER_HOST="$(grep '^SERVER_HOST=' .env | cut -d= -f2-)"
+
+                    SERVER_HOST="$(grep '^SERVER_HOST=' .env.ci | cut -d= -f2-)"
+
+                    if [ -z "$SERVER_HOST" ]; then
+                        echo "ERROR: SERVER_HOST is empty in .env.ci"
+                        exit 1
+                    fi
+
+                    echo "Testing against: http://${SERVER_HOST}"
+
                     BASE_URL="http://${SERVER_HOST}" ./tests/run-tests.sh
                 '''
             }
