@@ -40,3 +40,18 @@ WordPress and PrestaShop are assigned their own hostnames. <br>
 For the initial test environment, we will test the current behavior without making any changes at this time.
 
 
+## Proxy details for later use
+
+This line in our nginx configuration:
+```
+proxy_set_header X-Forwarded-Port $server_port;
+```
+typically returns port 80 within the container, even though the user is currently using port 8080. <br> 
+Therefore, our tests must ensure that generated links still use the correct external host and port.
+
+In addition, the following line:
+```
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+may overwrite the original **HTTPS protocol** with **HTTP when a Kubernetes Ingress is placed upstream**, because the connection between the **Ingress and Nginx runs internally over HTTP**. <br> 
+This isn't a Compose blocker yet, but it will be added to our Kubernetes compatibility tasks.
