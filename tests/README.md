@@ -100,3 +100,70 @@ pyproject.toml
 
 The project document requires at least unit tests and recommends integration, API, and end-to-end tests.<br> 
 The tests must be run later in the CI/CD pipeline before build, push, and deployment.
+
+## First Testings steps
+
+In the first steps, we create:
+```
+pyproject.toml
+tests/requirements-test.txt
+tests/conftest.py
+```
+
+We will also add following markers:
+```
+unit
+config
+integration
+smoke
+compose
+destructive
+future
+```
+
+With the help of pytest, we can group tests by registered markers and generate machine-readable JUnit XML reports for Jenkins.
+
+Subsequent command would look like this:
+
+```
+python -m pytest -m unit
+```
+```
+python -m pytest -m config
+```
+
+```
+python -m pytest \
+  -m “smoke or integration” \
+  --base-url http://localhost:8080
+```
+
+# Unit Tests
+
+For unit tests, we write small, pure Python functions for:
+
+- URL formation;
+- Detection of internal and external links;
+- Extraction of CSS, JavaScript, and image resources;
+- Evaluation of valid HTTP status codes.
+
+These functions can be tested without Docker or a network.
+
+This gives us real unit tests for the project code we’ve written ourselves.<br> 
+Since WordPress and PrestaShop are third-party software, we don’t test their internal PHP implementation, but rather our own deployment, routing, and validation logic.
+
+# Compose Configurations Tests
+
+Here we test whether:
+
+- The `dev` and `prod` configurations can be rendered.
+- No required variables are empty.
+- Dev uses `WORDPRESS_DEBUG=1`
+- Dev uses `PS_DEV_MODE=1`
+- Prod uses `0` for both values.
+- Prod has `restart: unless-stopped`
+- Only Nginx exposes a host port.
+- Databases do not expose any ports.
+- Nginx checks `/health`.
+- Both databases use volumes;
+- WordPress and its database share the private WordPress network.
