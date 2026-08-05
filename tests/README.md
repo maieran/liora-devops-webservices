@@ -29,7 +29,7 @@ This is acceptable for the current Compose prototype, but should be documented t
 Before moving to Kubernetes, **_we’ll need to decide later:_** <br>
 
 ### Option A:
-PrestaShop remains responsible for root paths.
+PrestaShop remains responsible for root paths. (**_Our current choice_**)
 
 ### Option B:
 PrestaShop is configured entirely under /prestashop/.
