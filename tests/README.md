@@ -55,3 +55,48 @@ proxy_set_header X-Forwarded-Proto $scheme;
 ```
 may overwrite the original **HTTPS protocol** with **HTTP when a Kubernetes Ingress is placed upstream**, because the connection between the **Ingress and Nginx runs internally over HTTP**. <br> 
 This isn't a Compose blocker yet, but it will be added to our Kubernetes compatibility tasks.
+
+## Test Architecture
+```
+tests/
+├── conftest.py
+├── requirements-test.txt
+│
+├── fixtures/
+│   └── env/
+│       ├── dev.env
+│       └── prod.env
+│
+├── support/
+│   ├── __init__.py
+│   ├── assets.py
+│   ├── compose.py
+│   └── urls.py
+│
+├── unit/
+│   ├── test_assets.py
+│   └── test_urls.py
+│
+├── config/
+│   ├── test_compose_config.py
+│   └── test_nginx_config.py
+│
+├── integration/
+│   ├── test_health.py
+│   ├── test_routes.py
+│   ├── test_redirects.py
+│   └── test_assets.py
+│
+├── runtime/
+│   └── test_compose_runtime.py
+│
+└── run-tests.sh
+```
+
+At the root of folder structure, we are having:
+```
+pyproject.toml
+```
+
+The project document requires at least unit tests and recommends integration, API, and end-to-end tests.<br> 
+The tests must be run later in the CI/CD pipeline before build, push, and deployment.
