@@ -2,3 +2,10 @@
 .env.dev
 .env.prod
 .DS_Store
+
+# Python tests
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+reports/
