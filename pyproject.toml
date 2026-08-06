@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = [
+    "tests/unit",
+    "tests/config",
+]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+junit_family = "xunit2"
+junit_suite_name = "liora-devops-webservices"
+
+markers = [
+    "unit: Pure Python tests without Docker or network access",
+    "config: Tests for rendered Docker Compose configurations",
+]
