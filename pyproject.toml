@@ -12,4 +12,9 @@ junit_suite_name = "liora-devops-webservices"
 markers = [
     "unit: Pure Python tests without Docker or network access",
     "config: Tests for rendered Docker Compose configurations",
+    "smoke: Basic deployment availability",
+    "integration: Application integration tests",
+    "network: Network and DNS isolation tests",
+    "docker: Docker-specific runtime tests",
+    "kubernetes: Kubernetes-specific runtime tests",
 ]
