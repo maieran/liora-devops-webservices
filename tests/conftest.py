@@ -1,14 +1,17 @@
 """Shared pytest fixtures."""
 
-from pathlib import Path
 
 import pytest
+import os
+
+from pathlib import Path
 
 from tests.support.compose import (
     ComposeModel,
     render_compose_config,
 )
 
+from tests.support.urls import normalize_base_url
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:
@@ -39,3 +42,17 @@ def compose_models(
             project_name="liora-config-prod",
         ),
     }
+
+@pytest.fixture(scope="session")
+def base_url() -> str:
+    """Return the externally reachable application base URL."""
+
+    value = os.environ.get("BASE_URL")
+
+    if not value:
+        pytest.fail(
+            "BASE_URL is required for runtime tests. "
+            "Example: BASE_URL=http://localhost:8080"
+        )
+
+    return normalize_base_url(value)
