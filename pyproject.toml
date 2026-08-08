@@ -5,6 +5,7 @@ testpaths = [
     "tests/config",
     "tests/health",
     "tests/smoke",
+    "tests/assets",
 ]
 pythonpath = ["."]
 addopts = "-ra --strict-markers"
@@ -16,6 +17,7 @@ markers = [
     "config: Tests for rendered Docker Compose configurations",
     "health: Basic runtime health endpoint tests",
     "smoke: Runtime checks for critical application endpoints",
+    "assets: Runtime validation of application CSS, JavaScript and image assets",
     "integration: Application integration tests",
     "network: Network and DNS isolation tests",
     "docker: Docker-specific runtime tests",
