@@ -274,3 +274,70 @@ def test_required_service_network_connections(
     # Databases must not be connected to the frontend network.
     assert "frontend-network" not in wordpress_db_networks
     assert "frontend-network" not in prestashop_db_networks
+
+@pytest.mark.parametrize("environment", ENVIRONMENTS)
+def test_nginx_publishes_internal_port_80(
+    compose_models,
+    environment: str,
+) -> None:
+    ports = (
+        compose_models[environment]
+        ["services"]
+        ["nginx"]
+        ["ports"]
+    )
+
+    assert any(
+        int(port["target"]) == 80
+        for port in ports
+    )
+
+@pytest.mark.parametrize(
+    ("environment", "expected_domain"),
+    [
+        ("dev", "dev.liora.test:8080"),
+        ("prod", "prod.liora.test:8080"),
+    ],
+)
+def test_prestashop_domain_comes_from_selected_env_file(
+    compose_models,
+    environment: str,
+    expected_domain: str,
+) -> None:
+    actual_domain = (
+        compose_models[environment]
+        ["services"]
+        ["prestashop"]
+        ["environment"]
+        ["PS_DOMAIN"]
+    )
+
+    assert actual_domain == expected_domain
+
+
+# Check for published port consistency to detect drift.
+@pytest.mark.parametrize("environment", ENVIRONMENTS)
+def test_prestashop_domain_port_matches_nginx_published_port(
+    compose_models,
+    environment: str,
+) -> None:
+    prestashop_domain = (
+        compose_models[environment]
+        ["services"]
+        ["prestashop"]
+        ["environment"]
+        ["PS_DOMAIN"]
+    )
+
+    published_port = (
+        compose_models[environment]
+        ["services"]
+        ["nginx"]
+        ["ports"]
+        [0]
+        ["published"]
+    )
+
+    domain_port = prestashop_domain.rsplit(":", 1)[1]
+
+    assert domain_port == str(published_port)
