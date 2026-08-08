@@ -1,5 +1,7 @@
 import pytest
 
+from typing import Any
+
 from tests.support.compose import (
     find_empty_environment_values,
     published_services,
@@ -49,6 +51,12 @@ EXPECTED_SERVICES = {
     "prestashop-db",
 }
 
+def service_networks(
+    service: dict[str, Any],
+) -> set[str]:
+    """Return all networks assigned to a service."""
+
+    return set((service.get("networks") or {}).keys())
 
 @pytest.mark.parametrize("environment", ENVIRONMENTS)
 def test_expected_services_exist(
@@ -222,3 +230,47 @@ def test_production_services_restart_unless_stopped(
     )
 
     assert service.get("restart") == "unless-stopped"
+
+@pytest.mark.parametrize("environment", ENVIRONMENTS)
+def test_required_service_network_connections(
+    compose_models,
+    environment: str,
+) -> None:
+    services = compose_models[environment]["services"]
+
+    nginx_networks = service_networks(
+        services["nginx"]
+    )
+
+    wordpress_networks = service_networks(
+        services["wordpress"]
+    )
+
+    wordpress_db_networks = service_networks(
+        services["wordpress-db"]
+    )
+
+    prestashop_networks = service_networks(
+        services["prestashop"]
+    )
+
+    prestashop_db_networks = service_networks(
+        services["prestashop-db"]
+    )
+
+    # Reverse proxy can reach both applications.
+    assert "frontend-network" in nginx_networks
+    assert "frontend-network" in wordpress_networks
+    assert "frontend-network" in prestashop_networks
+
+    # WordPress communicates with its DB through a private network.
+    assert "wordpress-network" in wordpress_networks
+    assert "wordpress-network" in wordpress_db_networks
+
+    # PrestaShop communicates with its DB through a private network.
+    assert "prestashop-network" in prestashop_networks
+    assert "prestashop-network" in prestashop_db_networks
+
+    # Databases must not be connected to the frontend network.
+    assert "frontend-network" not in wordpress_db_networks
+    assert "frontend-network" not in prestashop_db_networks
