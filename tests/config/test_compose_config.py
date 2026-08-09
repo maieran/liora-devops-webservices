@@ -230,7 +230,8 @@ def test_production_services_restart_unless_stopped(
     )
 
     assert service.get("restart") == "unless-stopped"
-
+    
+@pytest.mark.network
 @pytest.mark.parametrize("environment", ENVIRONMENTS)
 def test_required_service_network_connections(
     compose_models,
