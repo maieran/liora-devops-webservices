@@ -7,6 +7,7 @@ testpaths = [
     "tests/smoke",
     "tests/assets",
     "tests/routing",
+    "tests/integration",
 ]
 pythonpath = ["."]
 addopts = "-ra --strict-markers"
