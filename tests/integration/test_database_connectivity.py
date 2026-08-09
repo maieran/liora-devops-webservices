@@ -4,8 +4,11 @@ import os
 import subprocess
 import time
 import pytest
+import requests
 
 from pathlib import Path
+
+from tests.support.urls import join_url
 
 pytestmark = [
     pytest.mark.integration,
@@ -60,6 +63,19 @@ PERSISTENCE_TARGETS = [
         "pdo",
     ),
 ]
+
+APPLICATION_RESTART_TARGETS = [
+    (
+        "wordpress",
+        "/wordpress/",
+    ),
+    (
+        "prestashop",
+        "/",
+    ),
+]
+
+from tests.support.urls import join_url
 
 def compose_exec(
     project_root: Path,
@@ -1073,3 +1089,168 @@ try {
     )
 
     assert read_result.stdout.strip() == "persistence-ok"
+
+def wait_for_http_endpoint(
+    url: str,
+    timeout: int = 60,
+) -> None:
+    """Wait until an HTTP endpoint responds successfully."""
+
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        try:
+            response = requests.get(
+                url,
+                timeout=3,
+                allow_redirects=True,
+            )
+
+            if response.status_code == 200:
+                return
+
+        except requests.RequestException:
+            pass
+
+        time.sleep(2)
+
+    pytest.fail(
+        f"{url} did not recover within {timeout} seconds."
+    )
+
+@pytest.mark.resilience
+@pytest.mark.parametrize(
+    (
+        "service",
+        "public_path",
+    ),
+    APPLICATION_RESTART_TARGETS,
+)
+def test_application_recovers_after_restart(
+    project_root: Path,
+    base_url: str,
+    service: str,
+    public_path: str,
+) -> None:
+    """Application must become publicly reachable after container restart."""
+
+    application_url = join_url(
+        base_url,
+        public_path,
+    )
+
+    # Verify that the application works before restarting it.
+    before = requests.get(
+        application_url,
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert before.status_code == 200, (
+        f"{service} was not healthy before restart: "
+        f"HTTP {before.status_code}"
+    )
+
+    # Restart the application container.
+    restart_result = compose_restart_service(
+        project_root,
+        service,
+    )
+
+    assert restart_result.returncode == 0, (
+        f"Could not restart {service}:\n"
+        f"{restart_result.stderr}"
+    )
+
+    # Wait until the public application becomes available again.
+    wait_for_http_endpoint(
+        application_url,
+        timeout=60,
+    )
+
+    # Final verification.
+    after = requests.get(
+        application_url,
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert after.status_code == 200, (
+        f"{service} did not recover correctly: "
+        f"HTTP {after.status_code}"
+    )
+
+@pytest.mark.resilience
+def test_nginx_recovers_after_restart(
+    project_root: Path,
+    base_url: str,
+) -> None:
+    """Nginx must recover and expose all public endpoints after restart."""
+
+    health_url = join_url(
+        base_url,
+        "/health",
+    )
+
+    prestashop_url = join_url(
+        base_url,
+        "/",
+    )
+
+    wordpress_url = join_url(
+        base_url,
+        "/wordpress/",
+    )
+
+    # Verify Nginx works before restart.
+    before = requests.get(
+        health_url,
+        timeout=10,
+        allow_redirects=False,
+    )
+
+    assert before.status_code == 200
+
+    # Restart Nginx.
+    restart_result = compose_restart_service(
+        project_root,
+        "nginx",
+    )
+
+    assert restart_result.returncode == 0, (
+        "Could not restart nginx:\n"
+        f"{restart_result.stderr}"
+    )
+
+    # Wait for the public proxy to recover.
+    wait_for_http_endpoint(
+        health_url,
+        timeout=60,
+    )
+
+    # Verify health endpoint.
+    health_response = requests.get(
+        health_url,
+        timeout=10,
+    )
+
+    assert health_response.status_code == 200
+    assert health_response.text.strip().lower() == "ok"
+
+    # Verify PrestaShop through Nginx.
+    prestashop_response = requests.get(
+        prestashop_url,
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert prestashop_response.status_code == 200
+
+    # Verify WordPress through Nginx.
+    wordpress_response = requests.get(
+        wordpress_url,
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert wordpress_response.status_code == 200
