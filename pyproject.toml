@@ -6,6 +6,7 @@ testpaths = [
     "tests/health",
     "tests/smoke",
     "tests/assets",
+    "tests/routing",
 ]
 pythonpath = ["."]
 addopts = "-ra --strict-markers"
@@ -18,6 +19,7 @@ markers = [
     "health: Basic runtime health endpoint tests",
     "smoke: Runtime checks for critical application endpoints",
     "assets: Runtime validation of application CSS, JavaScript and image assets",
+    "routing: Runtime validation of reverse-proxy paths and application subpaths",
     "integration: Application integration tests",
     "network: Network and DNS isolation tests",
     "docker: Docker-specific runtime tests",

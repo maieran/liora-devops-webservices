@@ -16,7 +16,7 @@ pytestmark = pytest.mark.assets
 
 APPLICATION_PATHS = [
     ("wordpress", "/wordpress/"),
-    ("prestashop", "/prestashop/"),
+    ("prestashop", "/"),
 ]
 
 

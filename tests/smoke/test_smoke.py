@@ -14,7 +14,7 @@ pytestmark = pytest.mark.smoke
 
 APPLICATION_PATHS = [
     ("wordpress", "/wordpress/"),
-    ("prestashop", "/prestashop/"),
+    ("prestashop", "/"),
 ]
 
 
