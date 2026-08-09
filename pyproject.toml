@@ -22,6 +22,7 @@ markers = [
     "assets: Runtime validation of application CSS, JavaScript and image assets",
     "routing: Runtime validation of reverse-proxy paths and application subpaths",
     "integration: Application integration tests",
+    "persistence: Runtime tests verifying data survives service restarts",
     "network: Network and DNS isolation tests",
     "docker: Docker-specific runtime tests",
     "kubernetes: Kubernetes-specific runtime tests",
