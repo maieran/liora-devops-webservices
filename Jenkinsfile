@@ -226,7 +226,7 @@ pipeline {
                                     --no-build \
                                     --remove-orphans \
                                     --wait \
-                                    --wait-timeout 180
+                                    --wait-timeout 300
 
                                 docker compose \
                                     -p "$DEV_PROJECT" \
@@ -408,7 +408,7 @@ pipeline {
                                     --no-build \
                                     --remove-orphans \
                                     --wait \
-                                    --wait-timeout 180
+                                    --wait-timeout 300
 
                                 docker compose \
                                     -p "$STAGING_PROJECT" \
@@ -536,7 +536,7 @@ pipeline {
                                     --no-build \
                                     --remove-orphans \
                                     --wait \
-                                    --wait-timeout 180
+                                    --wait-timeout 300
 
                                 docker compose \
                                     -p "$PROD_PROJECT" \
