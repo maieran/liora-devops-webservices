@@ -14,14 +14,22 @@ pipeline {
     }
 
     options {
-        /* Prevent concurrent executions of the same branch job.Cross branch deployment collisions are handled separately using deployment locks. */
+        /*
+         * Prevent concurrent executions of the same branch job.
+         * Deployment locking is currently not enabled because
+         * the Lockable Resources option is not available on this Jenkins.
+         */
         disableConcurrentBuilds()
 
         timestamps()
     }
 
     stages {
-        /*Creates an immutable Docker image tag from the current Git commit SHA. */
+
+        /*
+         * Creates an immutable Docker image tag
+         * from the current Git commit SHA.
+         */
         stage('Pipeline Check') {
             steps {
                 script {
@@ -38,7 +46,12 @@ pipeline {
             }
         }
 
-        /*Displays information about the Jenkins worker and verifies that Docker and Docker Compose are available. BRANCH_NAME is used because this project is intended to run as a Jenkins Multibranch Pipeline. */
+        /*
+         * Displays information about the Jenkins worker and verifies
+         * that Docker and Docker Compose are available.
+         * BRANCH_NAME is used because this project is intended
+         * to run as a Jenkins Multibranch Pipeline.
+         */
         stage('Environment Info') {
             steps {
                 sh '''#!/usr/bin/env bash
@@ -55,7 +68,11 @@ pipeline {
             }
         }
 
-        /*A temporary environment file is created only for this stage. Jenkins credentials are not copied permanently into the workspace.The temporary file is automatically deleted when the shell exits. */
+        /*
+         * A temporary environment file is created only for this stage.
+         * Jenkins credentials are not copied permanently into the workspace.
+         * The temporary file is automatically deleted when the shell exits.
+         */
         stage('Validate Dev Compose') {
             steps {
                 withCredentials([
@@ -103,7 +120,11 @@ pipeline {
             }
         }
 
-        /*Application images are built using IMAGE_TAG. IMAGE_TAG contains the Git SHA and therefore identifies exactly which source revision produced each image. */
+        /*
+         * Application images are built using IMAGE_TAG.
+         * IMAGE_TAG contains the Git SHA and therefore identifies
+         * exactly which source revision produced each image.
+         */
         stage('Build Docker Images') {
             steps {
                 withCredentials([
@@ -156,13 +177,15 @@ pipeline {
             }
         }
 
-        /*Deployment and tests remain inside the SAME lock so another branch cannot overwrite Dev before the tests of the current branch finish.*/
+        /*
+         * Development deployment and tests.
+         * Locking can be added later when Lockable Resources
+         * support is available on Jenkins.
+         */
         stage('Development Environment') {
-            options {
-                lock(resource: 'liora-dev-deployment')
-            }
 
             stages {
+
                 stage('Deploy Dev') {
                     steps {
                         withCredentials([
@@ -241,7 +264,11 @@ pipeline {
             }
         }
 
-        /*Release images are published only from main. Feature branches may build and test images locally,but must not publish release images to Docker Hub. */
+        /*
+         * Release images are published only from main.
+         * Feature branches may build and test images locally,
+         * but must not publish release images to Docker Hub.
+         */
         stage('Docker Login') {
             when {
                 branch 'main'
@@ -267,7 +294,11 @@ pipeline {
             }
         }
 
-        /* Only main is allowed to publish images.The immutable Git SHA tag prevents different branch builds from overwriting the same Docker image tag. */
+        /*
+         * Only main is allowed to publish images.
+         * The immutable Git SHA tag prevents different branch
+         * builds from overwriting the same Docker image tag.
+         */
         stage('Push Docker Images') {
             when {
                 branch 'main'
@@ -311,17 +342,18 @@ pipeline {
             }
         }
 
-        /*Staging is deployed only from main.The entire deployment and test sequence is protected with one lock to avoid portor project name collisions.*/
+        /*
+         * Staging is deployed only from main.
+         * Deployment locking can be added later when supported
+         * by the Jenkins installation.
+         */
         stage('Staging Environment') {
             when {
                 branch 'main'
             }
 
-            options {
-                lock(resource: 'liora-staging-deployment')
-            }
-
             stages {
+
                 stage('Deploy Staging') {
                     steps {
                         withCredentials([
@@ -410,7 +442,11 @@ pipeline {
             }
         }
 
-        /* Production is available only from main.The timeout prevents the pipeline from waiting indefinitely for human approval.*/
+        /*
+         * Production is available only from main.
+         * The timeout prevents the pipeline from waiting
+         * indefinitely for human approval.
+         */
         stage('Production Approval') {
             when {
                 beforeInput true
@@ -433,16 +469,19 @@ pipeline {
                 echo "Production deployment approved for ${IMAGE_TAG}."
             }
         }
+
+        /*
+         * Production deployment and tests.
+         * Deployment locking can be added later when supported
+         * by the Jenkins installation.
+         */
         stage('Production Environment') {
             when {
                 branch 'main'
             }
 
-            options {
-                lock(resource: 'liora-production-deployment')
-            }
-
             stages {
+
                 stage('Deploy Production') {
                     steps {
                         withCredentials([
@@ -532,8 +571,14 @@ pipeline {
         }
     }
 
-    /*Docker authentication is removed regardless of whether the pipeline succeeds or fails.Temporary environment files use mktemp plus trap and are removed inside the stage that created them. */
+    /*
+     * Docker authentication is removed regardless of whether
+     * the pipeline succeeds or fails.
+     * Temporary environment files use mktemp plus trap and
+     * are removed inside the stage that created them.
+     */
     post {
+
         success {
             echo 'Pipeline completed successfully.'
             echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}"
