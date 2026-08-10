@@ -461,7 +461,7 @@ pipeline {
             }
 
             input {
-                message "Deploy image ${IMAGE_TAG} to Production?"
+                message 'Deploy the current validated image to Production?'
                 ok 'Deploy to Production'
             }
 
