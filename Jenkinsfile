@@ -76,46 +76,65 @@ pipeline {
         stage('Validate Dev Compose') {
             steps {
                 withCredentials([
-                    file(
-                        credentialsId: 'liora-dev-env',
-                        variable: 'DEV_ENV_FILE'
+                    string(
+                        credentialsId: 'liora-wp-db-password',
+                        variable: 'WORDPRESS_DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-wp-db-root-password',
+                        variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-presta-db-password',
+                        variable: 'PRESTASHOP_DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-presta-db-root-password',
+                        variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
                     )
                 ]) {
                     sh '''#!/usr/bin/env bash
-                        set -euo pipefail
+        set -euo pipefail
 
-                        ENV_FILE="$(mktemp)"
-                        chmod 600 "$ENV_FILE"
+        ENV_FILE="$(mktemp)"
+        chmod 600 "$ENV_FILE"
 
-                        trap 'rm -f "$ENV_FILE"' EXIT
+        trap 'rm -f "$ENV_FILE"' EXIT
 
-                        cat "$DEV_ENV_FILE" > "$ENV_FILE"
+        CURRENT_IP="$(
+            curl -fsS https://checkip.amazonaws.com |
+            tr -d '\\n'
+        )"
 
-                        CURRENT_IP="$(
-                            curl -fsS https://checkip.amazonaws.com |
-                            tr -d '\\n'
-                        )"
+        if [[ -z "$CURRENT_IP" ]]; then
+            echo "ERROR: Could not detect public IP."
+            exit 1
+        fi
 
-                        if [[ -z "$CURRENT_IP" ]]; then
-                            echo "ERROR: Could not detect public IP."
-                            exit 1
-                        fi
+        cat > "$ENV_FILE" <<EOF
+        WORDPRESS_DB_NAME=wordpress
+        WORDPRESS_DB_USER=wordpress
+        WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+        WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
 
-                        sed -i '/^APP_PORT=/d' "$ENV_FILE"
-                        sed -i '/^SERVER_HOST=/d' "$ENV_FILE"
+        PRESTASHOP_DB_NAME=prestashop
+        PRESTASHOP_DB_USER=prestashop
+        PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
+        PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
 
-                        echo "APP_PORT=${DEV_PORT}" >> "$ENV_FILE"
-                        echo "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" >> "$ENV_FILE"
+        APP_PORT=${DEV_PORT}
+        SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
+        EOF
 
-                        docker compose \
-                            -p "$DEV_PROJECT" \
-                            --env-file "$ENV_FILE" \
-                            -f docker-compose.yml \
-                            -f docker-compose.dev.yml \
-                            config --quiet
+        docker compose \
+            -p "$DEV_PROJECT" \
+            --env-file "$ENV_FILE" \
+            -f docker-compose.yml \
+            -f docker-compose.dev.yml \
+            config --quiet
 
-                        echo "Development Compose configuration is valid."
-                    '''
+        echo "Development Compose configuration is valid."
+        '''
                 }
             }
         }
@@ -128,51 +147,75 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 withCredentials([
-                    file(
-                        credentialsId: 'liora-dev-env',
-                        variable: 'DEV_ENV_FILE'
+                    string(
+                        credentialsId: 'liora-wp-db-password',
+                        variable: 'WORDPRESS_DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-wp-db-root-password',
+                        variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-presta-db-password',
+                        variable: 'PRESTASHOP_DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-presta-db-root-password',
+                        variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
                     )
                 ]) {
                     sh '''#!/usr/bin/env bash
-                        set -euo pipefail
+        set -euo pipefail
 
-                        ENV_FILE="$(mktemp)"
-                        chmod 600 "$ENV_FILE"
+        ENV_FILE="$(mktemp)"
+        chmod 600 "$ENV_FILE"
 
-                        trap 'rm -f "$ENV_FILE"' EXIT
+        trap 'rm -f "$ENV_FILE"' EXIT
 
-                        cat "$DEV_ENV_FILE" > "$ENV_FILE"
+        CURRENT_IP="$(
+            curl -fsS https://checkip.amazonaws.com |
+            tr -d '\\n'
+        )"
 
-                        CURRENT_IP="$(
-                            curl -fsS https://checkip.amazonaws.com |
-                            tr -d '\\n'
-                        )"
+        if [[ -z "$CURRENT_IP" ]]; then
+            echo "ERROR: Could not detect public IP."
+            exit 1
+        fi
 
-                        sed -i '/^APP_PORT=/d' "$ENV_FILE"
-                        sed -i '/^SERVER_HOST=/d' "$ENV_FILE"
+        cat > "$ENV_FILE" <<EOF
+        WORDPRESS_DB_NAME=wordpress
+        WORDPRESS_DB_USER=wordpress
+        WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+        WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
 
-                        echo "APP_PORT=${DEV_PORT}" >> "$ENV_FILE"
-                        echo "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" >> "$ENV_FILE"
+        PRESTASHOP_DB_NAME=prestashop
+        PRESTASHOP_DB_USER=prestashop
+        PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
+        PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
 
-                        echo "Building images with tag: ${IMAGE_TAG}"
+        APP_PORT=${DEV_PORT}
+        SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
+        EOF
 
-                        docker compose \
-                            -p "$DEV_PROJECT" \
-                            --env-file "$ENV_FILE" \
-                            -f docker-compose.yml \
-                            -f docker-compose.dev.yml \
-                            build
+        echo "Building images with tag: ${IMAGE_TAG}"
 
-                        echo
-                        echo "Built Docker images:"
+        docker compose \
+            -p "$DEV_PROJECT" \
+            --env-file "$ENV_FILE" \
+            -f docker-compose.yml \
+            -f docker-compose.dev.yml \
+            build
 
-                        docker compose \
-                            -p "$DEV_PROJECT" \
-                            --env-file "$ENV_FILE" \
-                            -f docker-compose.yml \
-                            -f docker-compose.dev.yml \
-                            config --images
-                    '''
+        echo
+        echo "Built Docker images:"
+
+        docker compose \
+            -p "$DEV_PROJECT" \
+            --env-file "$ENV_FILE" \
+            -f docker-compose.yml \
+            -f docker-compose.dev.yml \
+            config --images
+        '''
                 }
             }
         }
@@ -189,52 +232,76 @@ pipeline {
                 stage('Deploy Dev') {
                     steps {
                         withCredentials([
-                            file(
-                                credentialsId: 'liora-dev-env',
-                                variable: 'DEV_ENV_FILE'
+                            string(
+                                credentialsId: 'liora-wp-db-password',
+                                variable: 'WORDPRESS_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-wp-db-root-password',
+                                variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-password',
+                                variable: 'PRESTASHOP_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-root-password',
+                                variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
                             )
                         ]) {
                             sh '''#!/usr/bin/env bash
-                                set -euo pipefail
+                set -euo pipefail
 
-                                ENV_FILE="$(mktemp)"
-                                chmod 600 "$ENV_FILE"
+                ENV_FILE="$(mktemp)"
+                chmod 600 "$ENV_FILE"
 
-                                trap 'rm -f "$ENV_FILE"' EXIT
+                trap 'rm -f "$ENV_FILE"' EXIT
 
-                                cat "$DEV_ENV_FILE" > "$ENV_FILE"
+                CURRENT_IP="$(
+                    curl -fsS https://checkip.amazonaws.com |
+                    tr -d '\\n'
+                )"
 
-                                CURRENT_IP="$(
-                                    curl -fsS https://checkip.amazonaws.com |
-                                    tr -d '\\n'
-                                )"
+                if [[ -z "$CURRENT_IP" ]]; then
+                    echo "ERROR: Could not detect public IP."
+                    exit 1
+                fi
 
-                                sed -i '/^APP_PORT=/d' "$ENV_FILE"
-                                sed -i '/^SERVER_HOST=/d' "$ENV_FILE"
+                cat > "$ENV_FILE" <<EOF
+                WORDPRESS_DB_NAME=wordpress
+                WORDPRESS_DB_USER=wordpress
+                WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+                WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
 
-                                echo "APP_PORT=${DEV_PORT}" >> "$ENV_FILE"
-                                echo "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" >> "$ENV_FILE"
+                PRESTASHOP_DB_NAME=prestashop
+                PRESTASHOP_DB_USER=prestashop
+                PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
+                PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
 
-                                echo "Deploying Dev image: ${IMAGE_TAG}"
+                APP_PORT=${DEV_PORT}
+                SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
+                EOF
 
-                                docker compose \
-                                    -p "$DEV_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.dev.yml \
-                                    up -d \
-                                    --no-build \
-                                    --remove-orphans \
-                                    --wait \
-                                    --wait-timeout 300
+                echo "Deploying Dev image: ${IMAGE_TAG}"
 
-                                docker compose \
-                                    -p "$DEV_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.dev.yml \
-                                    ps
-                            '''
+                docker compose \
+                    -p "$DEV_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.dev.yml \
+                    up -d \
+                    --no-build \
+                    --remove-orphans \
+                    --wait \
+                    --wait-timeout 300
+
+                docker compose \
+                    -p "$DEV_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.dev.yml \
+                    ps
+                '''
                         }
                     }
                 }
@@ -306,38 +373,65 @@ pipeline {
 
             steps {
                 withCredentials([
-                    file(
-                        credentialsId: 'liora-dev-env',
-                        variable: 'DEV_ENV_FILE'
+                    string(
+                        credentialsId: 'liora-wp-db-password',
+                        variable: 'WORDPRESS_DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-wp-db-root-password',
+                        variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-presta-db-password',
+                        variable: 'PRESTASHOP_DB_PASSWORD'
+                    ),
+                    string(
+                        credentialsId: 'liora-presta-db-root-password',
+                        variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
                     )
                 ]) {
                     sh '''#!/usr/bin/env bash
-                        set -euo pipefail
+        set -euo pipefail
 
-                        ENV_FILE="$(mktemp)"
-                        chmod 600 "$ENV_FILE"
+        ENV_FILE="$(mktemp)"
+        chmod 600 "$ENV_FILE"
 
-                        trap 'rm -f "$ENV_FILE"' EXIT
+        trap 'rm -f "$ENV_FILE"' EXIT
 
-                        cat "$DEV_ENV_FILE" > "$ENV_FILE"
+        CURRENT_IP="$(
+            curl -fsS https://checkip.amazonaws.com |
+            tr -d '\\n'
+        )"
 
-                        CURRENT_IP="$(
-                            curl -fsS https://checkip.amazonaws.com |
-                            tr -d '\\n'
-                        )"
+        if [[ -z "$CURRENT_IP" ]]; then
+            echo "ERROR: Could not detect public IP."
+            exit 1
+        fi
 
-                        echo "APP_PORT=${DEV_PORT}" >> "$ENV_FILE"
-                        echo "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" >> "$ENV_FILE"
+        cat > "$ENV_FILE" <<EOF
+        WORDPRESS_DB_NAME=wordpress
+        WORDPRESS_DB_USER=wordpress
+        WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+        WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
 
-                        echo "Pushing Docker image tag: ${IMAGE_TAG}"
+        PRESTASHOP_DB_NAME=prestashop
+        PRESTASHOP_DB_USER=prestashop
+        PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
+        PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
 
-                        docker compose \
-                            -p "$DEV_PROJECT" \
-                            --env-file "$ENV_FILE" \
-                            -f docker-compose.yml \
-                            -f docker-compose.dev.yml \
-                            push
-                    '''
+        APP_PORT=${DEV_PORT}
+        SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
+        EOF
+
+        echo "Pushing Docker image tag: ${IMAGE_TAG}"
+
+        docker compose \
+            -p "$DEV_PROJECT" \
+            --env-file "$ENV_FILE" \
+            -f docker-compose.yml \
+            -f docker-compose.dev.yml \
+            push
+        '''
                 }
             }
         }
@@ -357,66 +451,90 @@ pipeline {
                 stage('Deploy Staging') {
                     steps {
                         withCredentials([
-                            file(
-                                credentialsId: 'liora-staging-env',
-                                variable: 'STAGING_ENV_FILE'
+                            string(
+                                credentialsId: 'liora-wp-db-password',
+                                variable: 'WORDPRESS_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-wp-db-root-password',
+                                variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-password',
+                                variable: 'PRESTASHOP_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-root-password',
+                                variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
                             )
                         ]) {
                             sh '''#!/usr/bin/env bash
-                                set -euo pipefail
+                set -euo pipefail
 
-                                ENV_FILE="$(mktemp)"
-                                chmod 600 "$ENV_FILE"
+                ENV_FILE="$(mktemp)"
+                chmod 600 "$ENV_FILE"
 
-                                trap 'rm -f "$ENV_FILE"' EXIT
+                trap 'rm -f "$ENV_FILE"' EXIT
 
-                                cat "$STAGING_ENV_FILE" > "$ENV_FILE"
+                CURRENT_IP="$(
+                    curl -fsS https://checkip.amazonaws.com |
+                    tr -d '\\n'
+                )"
 
-                                CURRENT_IP="$(
-                                    curl -fsS https://checkip.amazonaws.com |
-                                    tr -d '\\n'
-                                )"
+                if [[ -z "$CURRENT_IP" ]]; then
+                    echo "ERROR: Could not detect public IP."
+                    exit 1
+                fi
 
-                                sed -i '/^APP_PORT=/d' "$ENV_FILE"
-                                sed -i '/^SERVER_HOST=/d' "$ENV_FILE"
+                cat > "$ENV_FILE" <<EOF
+                WORDPRESS_DB_NAME=wordpress
+                WORDPRESS_DB_USER=wordpress
+                WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+                WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
 
-                                echo "APP_PORT=${STAGING_PORT}" >> "$ENV_FILE"
-                                echo "SERVER_HOST=${CURRENT_IP}:${STAGING_PORT}" >> "$ENV_FILE"
+                PRESTASHOP_DB_NAME=prestashop
+                PRESTASHOP_DB_USER=prestashop
+                PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
+                PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
 
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    config --quiet
+                APP_PORT=${STAGING_PORT}
+                SERVER_HOST=${CURRENT_IP}:${STAGING_PORT}
+                EOF
 
-                                echo "Deploying ${IMAGE_TAG} to Staging."
+                docker compose \
+                    -p "$STAGING_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.staging.yml \
+                    config --quiet
 
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    pull nginx wordpress prestashop
+                echo "Deploying ${IMAGE_TAG} to Staging."
 
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    up -d \
-                                    --no-build \
-                                    --remove-orphans \
-                                    --wait \
-                                    --wait-timeout 300
+                docker compose \
+                    -p "$STAGING_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.staging.yml \
+                    pull nginx wordpress prestashop
 
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    ps
-                            '''
+                docker compose \
+                    -p "$STAGING_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.staging.yml \
+                    up -d \
+                    --no-build \
+                    --remove-orphans \
+                    --wait \
+                    --wait-timeout 300
+
+                docker compose \
+                    -p "$STAGING_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.staging.yml \
+                    ps
+                '''
                         }
                     }
                 }
@@ -481,70 +599,93 @@ pipeline {
             }
 
             stages {
-
                 stage('Deploy Production') {
                     steps {
                         withCredentials([
-                            file(
-                                credentialsId: 'liora-prod-env',
-                                variable: 'PROD_ENV_FILE'
+                            string(
+                                credentialsId: 'liora-wp-db-password',
+                                variable: 'WORDPRESS_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-wp-db-root-password',
+                                variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-password',
+                                variable: 'PRESTASHOP_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-root-password',
+                                variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
                             )
                         ]) {
                             sh '''#!/usr/bin/env bash
-                                set -euo pipefail
+                set -euo pipefail
 
-                                ENV_FILE="$(mktemp)"
-                                chmod 600 "$ENV_FILE"
+                ENV_FILE="$(mktemp)"
+                chmod 600 "$ENV_FILE"
 
-                                trap 'rm -f "$ENV_FILE"' EXIT
+                trap 'rm -f "$ENV_FILE"' EXIT
 
-                                cat "$PROD_ENV_FILE" > "$ENV_FILE"
+                CURRENT_IP="$(
+                    curl -fsS https://checkip.amazonaws.com |
+                    tr -d '\\n'
+                )"
 
-                                CURRENT_IP="$(
-                                    curl -fsS https://checkip.amazonaws.com |
-                                    tr -d '\\n'
-                                )"
+                if [[ -z "$CURRENT_IP" ]]; then
+                    echo "ERROR: Could not detect public IP."
+                    exit 1
+                fi
 
-                                sed -i '/^APP_PORT=/d' "$ENV_FILE"
-                                sed -i '/^SERVER_HOST=/d' "$ENV_FILE"
+                cat > "$ENV_FILE" <<EOF
+                WORDPRESS_DB_NAME=wordpress
+                WORDPRESS_DB_USER=wordpress
+                WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+                WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
 
-                                echo "APP_PORT=${PROD_PORT}" >> "$ENV_FILE"
-                                echo "SERVER_HOST=${CURRENT_IP}:${PROD_PORT}" >> "$ENV_FILE"
+                PRESTASHOP_DB_NAME=prestashop
+                PRESTASHOP_DB_USER=prestashop
+                PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
+                PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
 
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    config --quiet
+                APP_PORT=${PROD_PORT}
+                SERVER_HOST=${CURRENT_IP}:${PROD_PORT}
+                EOF
 
-                                echo "Deploying ${IMAGE_TAG} to Production."
+                docker compose \
+                    -p "$PROD_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.prod.yml \
+                    config --quiet
 
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    pull nginx wordpress prestashop
+                echo "Deploying ${IMAGE_TAG} to Production."
 
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    up -d \
-                                    --no-build \
-                                    --remove-orphans \
-                                    --wait \
-                                    --wait-timeout 300
+                docker compose \
+                    -p "$PROD_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.prod.yml \
+                    pull nginx wordpress prestashop
 
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    ps
-                            '''
+                docker compose \
+                    -p "$PROD_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.prod.yml \
+                    up -d \
+                    --no-build \
+                    --remove-orphans \
+                    --wait \
+                    --wait-timeout 300
+
+                docker compose \
+                    -p "$PROD_PROJECT" \
+                    --env-file "$ENV_FILE" \
+                    -f docker-compose.yml \
+                    -f docker-compose.prod.yml \
+                    ps
+                '''
                         }
                     }
                 }
