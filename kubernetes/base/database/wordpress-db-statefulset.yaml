@@ -26,7 +26,7 @@ spec:
           ports:
             - name: mysql
               containerPort: 3306
-          
+
           env:
             - name: MYSQL_DATABASE
               valueFrom:
@@ -45,25 +45,25 @@ spec:
                 secretKeyRef:
                   name: liora-db-secrets
                   key: WORDPRESS_DB_PASSWORD
-            
+
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: liora-db-secrets
                   key: WORDPRESS_DB_ROOT_PASSWORD
-          
+
           readinessProbe:
             exec:
               command:
                 - sh
                 - -c
                 - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"
-          
+
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 10
-          
+
           livenessProbe:
             exec:
               command:
@@ -91,4 +91,3 @@ spec:
         resources:
           requests:
             storage: 1Gi
-              
