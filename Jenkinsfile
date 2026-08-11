@@ -25,7 +25,6 @@ pipeline {
     }
 
     stages {
-
         /*
          * Creates an immutable Docker image tag
          * from the current Git commit SHA.
@@ -226,9 +225,7 @@ pipeline {
          * support is available on Jenkins.
          */
         stage('Development Environment') {
-
             stages {
-
                 stage('Deploy Dev') {
                     steps {
                         withCredentials([
@@ -447,7 +444,6 @@ pipeline {
             }
 
             stages {
-
                 stage('Deploy Staging') {
                     steps {
                         withCredentials([
@@ -719,7 +715,6 @@ pipeline {
      * are removed inside the stage that created them.
      */
     post {
-
         success {
             echo 'Pipeline completed successfully.'
             echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}"
