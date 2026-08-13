@@ -6,3 +6,9 @@
 secret.yaml
 secrets.yaml
 passwords.txt
+# Python tests
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+reports/
