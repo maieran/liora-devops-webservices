@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: allow-prestashop-to-prestashop-db
+  namespace: liora-dev
+
+spec:
+  podSelector:
+    matchLabels:
+      app: prestashop-db
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: prestashop-app
+
+      ports:
+        - protocol: TCP
+          port: 3306

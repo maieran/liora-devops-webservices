@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: allow-nginx-to-prestashop
+  namespace: liora-dev
+
+spec:
+  podSelector:
+    matchLabels:
+      app: prestashop-app
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: nginx-deployment
+
+      ports:
+        - protocol: TCP
+          port: 80
