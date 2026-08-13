@@ -6,7 +6,7 @@ metadata:
   namespace: liora-dev
 
 spec:
-  serviceName: wordpress-db
+  serviceName: wordpress-db-service-headless
   replicas: 1
 
   selector:

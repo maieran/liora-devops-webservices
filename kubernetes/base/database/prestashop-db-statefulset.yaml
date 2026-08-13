@@ -6,7 +6,7 @@ metadata:
   namespace: liora-dev
 
 spec:
-  serviceName: prestashop-db
+  serviceName: prestashop-db-service-headless
   replicas: 1
 
   selector:
