@@ -2,3 +2,7 @@
 .env.dev
 .env.prod
 .DS_Store
+
+secret.yaml
+secrets.yaml
+passwords.txt
