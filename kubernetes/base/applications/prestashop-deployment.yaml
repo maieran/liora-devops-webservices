@@ -73,8 +73,7 @@ spec:
               value: "1"
 
             - name: PS_DOMAIN
-              value: "18.201.187.218:30080"
-              #value: "YOUR_NODE_IP:30080"
+              value: "YOUR_NODE_IP:30080"
 
           # HTTP probes on "/" follow WordPress redirects to /wordpress/...,
           # causing the liveness probe to fail and the container to restart.
