@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: prestashop-app
+  namespace: liora-dev
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: prestashop-app
+
+  template:
+    metadata:
+      labels:
+        app: prestashop-app
+
+    spec:
+
+      initContainers:
+        - name: wait-for-prestashop-db
+          image: busybox:1.36
+
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PrestaShop database..."
+
+              until nc -z prestashop-db-service-headless 3306; do
+                echo "prestashop-db is not ready yet..."
+                sleep 2
+              done
+
+              echo "prestashop-db is reachable."
+
+      containers:
+        - name: prestashop-app
+          image: andrem43/prestashop-kubernetes:base
+
+          ports:
+            - name: http
+              containerPort: 80
+
+          env:
+            - name: DB_SERVER
+              value: prestashop-db-service-headless
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: liora-db-secrets
+                  key: PRESTASHOP_DB_NAME
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: liora-db-secrets
+                  key: PRESTASHOP_DB_USER
+
+            - name: DB_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: liora-db-secrets
+                  key: PRESTASHOP_DB_PASSWORD
+
+            - name: PS_INSTALL_AUTO
+              value: "1"
+
+            - name: PS_DEV_MODE
+              value: "1"
+
+            - name: PS_DOMAIN
+              value: "18.201.187.218:30080"
+              #value: "YOUR_NODE_IP:30080"
+
+          # HTTP probes on "/" follow WordPress redirects to /wordpress/...,
+          # causing the liveness probe to fail and the container to restart.
+          # Use TCP probes here; HTTP routing is validated externally through Nginx by runtime tests.
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24
+
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
