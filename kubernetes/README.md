@@ -19,34 +19,34 @@ This keeps Services, Deployments, StatefulSets, ConfigMaps and NetworkPolicies c
 ## Kubernetes Architecture
 
 ```text
-                        External Request
-                              |
-                              | NodePort :30080
-                              v
-                        nginx-service
-                              |
-                              v
-                       nginx-deployment
-                         /          \
-                        /            \
-                     :80              :80
-                      v                v
-          wordpress-app-service   prestashop-app-service
-                      |                |
-                      v                v
-              wordpress-app      prestashop-app
-                      |                |
-                   :3306            :3306
-                      |                |
-                      v                v
-     wordpress-db-service-headless   prestashop-db-service-headless
-                      |                |
-                      v                v
-              wordpress-db       prestashop-db
-               StatefulSet        StatefulSet
-                      |                |
-                      v                v
-                     PVC              PVC
+                        External Request
+                              |
+                              | NodePort :30080
+                              v
+                        nginx-service
+                              |
+                              v
+                       nginx-deployment
+                         /          \\
+                        /            \\
+                     :80              :80
+                      v                v
+          wordpress-app-service   prestashop-app-service
+                      |                |
+                      v                v
+              wordpress-app      prestashop-app
+                      |                |
+                   :3306            :3306
+                      |                |
+                      v                v
+     wordpress-db-service-headless   prestashop-db-service-headless
+                      |                |
+                      v                v
+              wordpress-db       prestashop-db
+               StatefulSet        StatefulSet
+                      |                |
+                      v                v
+                     PVC              PVC
 ```
 
 The databases use StatefulSets because their persistent storage and stable network identity must survive Pod recreation.
@@ -68,9 +68,9 @@ NodePort 30080
 Routing:
 
 ```text
-/             -> PrestaShop
-/wordpress/   -> WordPress
-/health       -> Nginx health endpoint
+/             -> PrestaShop
+/wordpress/   -> WordPress
+/health       -> Nginx health endpoint
 ```
 
 Additional redirects are configured for paths such as:
@@ -92,36 +92,36 @@ PrestaShop is canonically served from `/` because it generates root-relative URL
 kubernetes/
 ├── README.md
 └── base/
-    ├── namespace/
-    │   └── namespace.yaml
-    │
-    ├── database/
-    │   ├── wordpress-db-service-headless.yaml
-    │   ├── wordpress-db-statefulset.yaml
-    │   ├── prestashop-db-service-headless.yaml
-    │   └── prestashop-db-statefulset.yaml
-    │
-    ├── applications/
-    │   ├── wordpress-service.yaml
-    │   ├── wordpress-deployment.yaml
-    │   ├── prestashop-service.yaml
-    │   └── prestashop-deployment.yaml
-    │
-    ├── nginx/
-    │   ├── nginx-configmap.yaml
-    │   ├── nginx-deployment.yaml
-    │   └── nginx-service.yaml
-    │
-    ├── network-policy/
-    │   ├── default-deny.yaml
-    │   ├── allow-nginx-ingress.yaml
-    │   ├── allow-nginx-wordpress.yaml
-    │   ├── allow-nginx-prestashop.yaml
-    │   ├── allow-wordpress-db.yaml
-    │   └── allow-prestashop-db.yaml
-    │
-    └── secrets/
-        └── README.md
+    ├── namespace/
+    │   └── namespace.yaml
+    │
+    ├── database/
+    │   ├── wordpress-db-service-headless.yaml
+    │   ├── wordpress-db-statefulset.yaml
+    │   ├── prestashop-db-service-headless.yaml
+    │   └── prestashop-db-statefulset.yaml
+    │
+    ├── applications/
+    │   ├── wordpress-service.yaml
+    │   ├── wordpress-deployment.yaml
+    │   ├── prestashop-service.yaml
+    │   └── prestashop-deployment.yaml
+    │
+    ├── nginx/
+    │   ├── nginx-configmap.yaml
+    │   ├── nginx-deployment.yaml
+    │   └── nginx-service.yaml
+    │
+    ├── network-policy/
+    │   ├── default-deny.yaml
+    │   ├── allow-nginx-ingress.yaml
+    │   ├── allow-nginx-wordpress.yaml
+    │   ├── allow-nginx-prestashop.yaml
+    │   ├── allow-wordpress-db.yaml
+    │   └── allow-prestashop-db.yaml
+    │
+    └── secrets/
+        └── README.md
 ```
 
 ---
@@ -141,10 +141,10 @@ The applications connect through:
 
 ```text
 wordpress-app
-    -> wordpress-db-service-headless:3306
+    -> wordpress-db-service-headless:3306
 
 prestashop-app
-    -> prestashop-db-service-headless:3306
+    -> prestashop-db-service-headless:3306
 ```
 
 Each database StatefulSet requests:
@@ -187,11 +187,11 @@ This creates the startup order:
 
 ```text
 Databases
-    |
-    v
+    |
+    v
 Applications
-    |
-    v
+    |
+    v
 Nginx
 ```
 
@@ -242,40 +242,40 @@ Only explicitly required connections are then permitted.
 ### Allowed Traffic
 
 ```text
-External   ---> Nginx
-Nginx      ---> WordPress
-Nginx      ---> PrestaShop
-WordPress  ---> WordPress DB
+External   ---> Nginx
+Nginx      ---> WordPress
+Nginx      ---> PrestaShop
+WordPress  ---> WordPress DB
 PrestaShop ---> PrestaShop DB
 ```
 
 ### Blocked Traffic
 
 ```text
-WordPress  -X-> PrestaShop DB
+WordPress  -X-> PrestaShop DB
 PrestaShop -X-> WordPress DB
-Nginx      -X-> WordPress DB
-Nginx      -X-> PrestaShop DB
+Nginx      -X-> WordPress DB
+Nginx      -X-> PrestaShop DB
 ```
 
 Architecture:
 
 ```text
-                     External
-                        |
-                        | :80
-                        v
-                     [Nginx]
-                     /     \
-                  :80       :80
-                   /         \
-                  v           v
-          [WordPress]     [PrestaShop]
-               |               |
-             :3306           :3306
-               |               |
-               v               v
-        [wordpress-db]   [prestashop-db]
+                     External
+                        |
+                        | :80
+                        v
+                     [Nginx]
+                     /     \\
+                  :80       :80
+                   /         \\
+                  v           v
+          [WordPress]     [PrestaShop]
+               |               |
+             :3306           :3306
+               |               |
+               v               v
+        [wordpress-db]   [prestashop-db]
 ```
 
 Only ingress is currently default-denied.
@@ -311,8 +311,8 @@ for the required keys and creation commands.
 ## 1. Create the Namespace
 
 ```bash
-kubectl apply \
-  -f kubernetes/base/namespace/
+kubectl apply \\
+  -f kubernetes/base/namespace/
 ```
 
 Verify:
@@ -340,9 +340,9 @@ kubernetes/base/secrets/README.md
 Verify:
 
 ```bash
-kubectl get secret \
-  liora-db-secrets \
-  -n liora-dev
+kubectl get secret \\
+  liora-db-secrets \\
+  -n liora-dev
 ```
 
 ---
@@ -350,30 +350,30 @@ kubectl get secret \
 ## 3. Deploy Databases
 
 ```bash
-kubectl apply \
-  -f kubernetes/base/database/
+kubectl apply \\
+  -f kubernetes/base/database/
 ```
 
 Wait until both databases are healthy:
 
 ```bash
-kubectl get pods \
-  -n liora-dev \
-  -w
+kubectl get pods \\
+  -n liora-dev \\
+  -w
 ```
 
 Expected:
 
 ```text
-wordpress-db-0     1/1 Running
-prestashop-db-0    1/1 Running
+wordpress-db-0     1/1 Running
+prestashop-db-0    1/1 Running
 ```
 
 Verify persistent storage:
 
 ```bash
-kubectl get pvc \
-  -n liora-dev
+kubectl get pvc \\
+  -n liora-dev
 ```
 
 Both PVCs should be:
@@ -384,15 +384,30 @@ Bound
 
 ---
 
-## 4. Deploy Applications
+## 4. Configure and Deploy Applications
 
-Before deployment, configure the correct public development address in the PrestaShop Deployment:
+### Configure the PrestaShop Public Domain
+
+Before deploying the applications, configure the public Kubernetes Node address in:
 
 ```text
-<NODE_PUBLIC_IP>:30080
+kubernetes/base/applications/prestashop-deployment.yaml
 ```
 
-Then:
+Set the `PS_DOMAIN` environment variable to the public Node IP and the Nginx NodePort:
+
+```yaml
+- name: PS_DOMAIN
+  value: "YOUR_NODE_IP:30080"
+```
+
+Replace `YOUR_NODE_IP` with the public IP address of the Kubernetes Node.
+
+`PS_DOMAIN` is required because PrestaShop uses its configured public domain when generating URLs, redirects and asset links.
+
+This is a manual environment-specific setting in the current raw Kubernetes implementation. In the next Helm implementation, this value will be moved into environment-specific Helm values instead of being hard-coded in the Deployment manifest.
+
+Then deploy the applications:
 
 ```bash
 kubectl apply \
@@ -418,28 +433,28 @@ prestashop-app    1/1
 ## 5. Deploy Nginx
 
 ```bash
-kubectl apply \
-  -f kubernetes/base/nginx/
+kubectl apply \\
+  -f kubernetes/base/nginx/
 ```
 
 Verify:
 
 ```bash
-kubectl get deployment \
-  -n liora-dev
+kubectl get deployment \\
+  -n liora-dev
 ```
 
 Expected:
 
 ```text
-nginx-deployment   1/1
+nginx-deployment   1/1
 ```
 
 Check the NodePort:
 
 ```bash
-kubectl get svc nginx-service \
-  -n liora-dev
+kubectl get svc nginx-service \\
+  -n liora-dev
 ```
 
 ---
@@ -449,7 +464,7 @@ kubectl get svc nginx-service \
 Set:
 
 ```bash
-export BASE_URL="http://<NODE_PUBLIC_IP>:30080"
+export BASE_URL="http\://<NODE_PUBLIC_IP>:30080"
 ```
 
 Nginx health:
@@ -467,17 +482,17 @@ HTTP/1.1 200 OK
 WordPress:
 
 ```bash
-curl -IL \
-  --max-redirs 10 \
-  "$BASE_URL/wordpress/"
+curl -IL \\
+  --max-redirs 10 \\
+  "$BASE_URL/wordpress/"
 ```
 
 PrestaShop:
 
 ```bash
-curl -IL \
-  --max-redirs 10 \
-  "$BASE_URL/"
+curl -IL \\
+  --max-redirs 10 \\
+  "$BASE_URL/"
 ```
 
 ---
@@ -487,15 +502,15 @@ curl -IL \
 Only after the normal application communication has been verified:
 
 ```bash
-kubectl apply \
-  -f kubernetes/base/network-policy/
+kubectl apply \\
+  -f kubernetes/base/network-policy/
 ```
 
 Verify:
 
 ```bash
-kubectl get networkpolicy \
-  -n liora-dev
+kubectl get networkpolicy \\
+  -n liora-dev
 ```
 
 After applying the policies, repeat the public routing tests to ensure that required application traffic still works.
@@ -505,9 +520,9 @@ After applying the policies, repeat the public routing tests to ensure that requ
 ## Verify the Complete Environment
 
 ```bash
-kubectl get \
-  pods,deployments,statefulsets,services,pvc,networkpolicies \
-  -n liora-dev
+kubectl get \\
+  pods,deployments,statefulsets,services,pvc,networkpolicies \\
+  -n liora-dev
 ```
 
 All application and database Pods should be:
@@ -530,25 +545,25 @@ Bound
 
 ```text
 External Client
-      |
-      | :30080
-      v
- nginx-service
-      |
-      v
+      |
+      | :30080
+      v
+ nginx-service
+      |
+      v
 nginx-deployment
-    /       \
-   /         \
-  v           v
-WordPress   PrestaShop
-   |           |
-   v           v
-WP MySQL     PS MySQL
-   |           |
-   v           v
-  PVC         PVC
+    /       \\
+   /         \\
+  v           v
+WordPress   PrestaShop
+   |           |
+   v           v
+WP MySQL     PS MySQL
+   |           |
+   v           v
+  PVC         PVC
 ```
 
 The current Kubernetes implementation serves as the manually validated base architecture.
 
-The next deployment abstraction can convert these resources into Helm templates while keeping the same resource relationships and network isolation model.
+The next implementation phase converts these resources into Helm templates while keeping the same resource relationships and network isolation model. Environment-specific values such as PrestaShop `PS_DOMAIN` will then move out of the raw manifests and into Helm values.
