@@ -110,21 +110,20 @@ pipeline {
             exit 1
         fi
 
-        cat > "$ENV_FILE" <<EOF
-        WORDPRESS_DB_NAME=wordpress
-        WORDPRESS_DB_USER=wordpress
-        WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
-        WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
-
-        PRESTASHOP_DB_NAME=prestashop
-        PRESTASHOP_DB_USER=prestashop
-        PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
-        PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
-
-        APP_PORT=${DEV_PORT}
-        SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
-        EOF
-
+        printf '%s\n' \
+            "WORDPRESS_DB_NAME=wordpress" \
+            "WORDPRESS_DB_USER=wordpress" \
+            "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+            "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+            "" \
+            "PRESTASHOP_DB_NAME=prestashop" \
+            "PRESTASHOP_DB_USER=prestashop" \
+            "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+            "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+            "" \
+            "APP_PORT=${DEV_PORT}" \
+            "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+            > "$ENV_FILE"
         docker compose \
             -p "$DEV_PROJECT" \
             --env-file "$ENV_FILE" \
@@ -181,20 +180,20 @@ pipeline {
             exit 1
         fi
 
-        cat > "$ENV_FILE" <<EOF
-        WORDPRESS_DB_NAME=wordpress
-        WORDPRESS_DB_USER=wordpress
-        WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
-        WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
-
-        PRESTASHOP_DB_NAME=prestashop
-        PRESTASHOP_DB_USER=prestashop
-        PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
-        PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
-
-        APP_PORT=${DEV_PORT}
-        SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
-        EOF
+        printf '%s\n' \
+            "WORDPRESS_DB_NAME=wordpress" \
+            "WORDPRESS_DB_USER=wordpress" \
+            "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+            "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+            "" \
+            "PRESTASHOP_DB_NAME=prestashop" \
+            "PRESTASHOP_DB_USER=prestashop" \
+            "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+            "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+            "" \
+            "APP_PORT=${DEV_PORT}" \
+            "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+            > "$ENV_FILE"
 
         echo "Building images with tag: ${IMAGE_TAG}"
 
@@ -264,20 +263,20 @@ pipeline {
                     exit 1
                 fi
 
-                cat > "$ENV_FILE" <<EOF
-                WORDPRESS_DB_NAME=wordpress
-                WORDPRESS_DB_USER=wordpress
-                WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
-                WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
-
-                PRESTASHOP_DB_NAME=prestashop
-                PRESTASHOP_DB_USER=prestashop
-                PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
-                PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
-
-                APP_PORT=${DEV_PORT}
-                SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
-                EOF
+                printf '%s\n' \
+                    "WORDPRESS_DB_NAME=wordpress" \
+                    "WORDPRESS_DB_USER=wordpress" \
+                    "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+                    "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+                    "" \
+                    "PRESTASHOP_DB_NAME=prestashop" \
+                    "PRESTASHOP_DB_USER=prestashop" \
+                    "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+                    "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+                    "" \
+                    "APP_PORT=${DEV_PORT}" \
+                    "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+                    > "$ENV_FILE"
 
                 echo "Deploying Dev image: ${IMAGE_TAG}"
 
@@ -405,20 +404,20 @@ pipeline {
             exit 1
         fi
 
-        cat > "$ENV_FILE" <<EOF
-        WORDPRESS_DB_NAME=wordpress
-        WORDPRESS_DB_USER=wordpress
-        WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
-        WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
-
-        PRESTASHOP_DB_NAME=prestashop
-        PRESTASHOP_DB_USER=prestashop
-        PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
-        PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
-
-        APP_PORT=${DEV_PORT}
-        SERVER_HOST=${CURRENT_IP}:${DEV_PORT}
-        EOF
+        printf '%s\n' \
+            "WORDPRESS_DB_NAME=wordpress" \
+            "WORDPRESS_DB_USER=wordpress" \
+            "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+            "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+            "" \
+            "PRESTASHOP_DB_NAME=prestashop" \
+            "PRESTASHOP_DB_USER=prestashop" \
+            "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+            "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+            "" \
+            "APP_PORT=${DEV_PORT}" \
+            "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+            > "$ENV_FILE"
 
         echo "Pushing Docker image tag: ${IMAGE_TAG}"
 
@@ -482,20 +481,20 @@ pipeline {
                     exit 1
                 fi
 
-                cat > "$ENV_FILE" <<EOF
-                WORDPRESS_DB_NAME=wordpress
-                WORDPRESS_DB_USER=wordpress
-                WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
-                WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
-
-                PRESTASHOP_DB_NAME=prestashop
-                PRESTASHOP_DB_USER=prestashop
-                PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
-                PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
-
-                APP_PORT=${STAGING_PORT}
-                SERVER_HOST=${CURRENT_IP}:${STAGING_PORT}
-                EOF
+                printf '%s\n' \
+                    "WORDPRESS_DB_NAME=wordpress" \
+                    "WORDPRESS_DB_USER=wordpress" \
+                    "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+                    "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+                    "" \
+                    "PRESTASHOP_DB_NAME=prestashop" \
+                    "PRESTASHOP_DB_USER=prestashop" \
+                    "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+                    "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+                    "" \
+                    "APP_PORT=${STAGING_PORT}" \
+                    "SERVER_HOST=${CURRENT_IP}:${STAGING_PORT}" \
+                    > "$ENV_FILE"
 
                 docker compose \
                     -p "$STAGING_PROJECT" \
@@ -633,20 +632,20 @@ pipeline {
                     exit 1
                 fi
 
-                cat > "$ENV_FILE" <<EOF
-                WORDPRESS_DB_NAME=wordpress
-                WORDPRESS_DB_USER=wordpress
-                WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
-                WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
-
-                PRESTASHOP_DB_NAME=prestashop
-                PRESTASHOP_DB_USER=prestashop
-                PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}
-                PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}
-
-                APP_PORT=${PROD_PORT}
-                SERVER_HOST=${CURRENT_IP}:${PROD_PORT}
-                EOF
+                printf '%s\n' \
+                    "WORDPRESS_DB_NAME=wordpress" \
+                    "WORDPRESS_DB_USER=wordpress" \
+                    "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+                    "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+                    "" \
+                    "PRESTASHOP_DB_NAME=prestashop" \
+                    "PRESTASHOP_DB_USER=prestashop" \
+                    "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+                    "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+                    "" \
+                    "APP_PORT=${PROD_PORT}" \
+                    "SERVER_HOST=${CURRENT_IP}:${PROD_PORT}" \
+                    > "$ENV_FILE"
 
                 docker compose \
                     -p "$PROD_PROJECT" \
