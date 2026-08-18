@@ -316,7 +316,7 @@ pipeline {
                                 tr -d '\\n'
                             )"
 
-                            BASE_URL="http://${CURRENT_IP}:${DEV_PORT}"
+                            BASE_URL="http://127.0.0.1:${DEV_PORT}"
 
                             echo "Testing Dev: ${BASE_URL}"
 
@@ -544,7 +544,7 @@ pipeline {
                                 tr -d '\\n'
                             )"
 
-                            BASE_URL="http://${CURRENT_IP}:${STAGING_PORT}"
+                            BASE_URL="http://127.0.0.1:${STAGING_PORT}"
 
                             echo "Testing Staging: ${BASE_URL}"
 
@@ -695,7 +695,7 @@ pipeline {
                                 tr -d '\\n'
                             )"
 
-                            BASE_URL="http://${CURRENT_IP}:${PROD_PORT}"
+                            BASE_URL="http://127.0.0.1:${PROD_PORT}"
 
                             echo "Testing Production: ${BASE_URL}"
 
