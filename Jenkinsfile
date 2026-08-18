@@ -8,9 +8,9 @@ pipeline {
         STAGING_PROJECT = 'liora-staging'
         PROD_PROJECT = 'liora-prod'
 
-        DEV_PORT = '8080'
-        STAGING_PORT = '8081'
-        PROD_PORT = '8082'
+        DEV_PORT = '8088'
+        STAGING_PORT = '8089'
+        PROD_PORT = '8090'
     }
 
     options {
