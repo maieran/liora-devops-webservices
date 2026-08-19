@@ -1,4 +1,6 @@
 .env
 .env.dev
 .env.prod
+.env.ci
+.env.staging
 .DS_Store
