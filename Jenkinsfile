@@ -122,7 +122,7 @@ pipeline {
             "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
             "" \
             "APP_PORT=${DEV_PORT}" \
-            "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+            "SERVER_HOST=127.0.0.1:${DEV_PORT}" \
             > "$ENV_FILE"
         docker compose \
             -p "$DEV_PROJECT" \
@@ -192,7 +192,7 @@ pipeline {
             "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
             "" \
             "APP_PORT=${DEV_PORT}" \
-            "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+            "SERVER_HOST=127.0.0.1:${DEV_PORT}" \
             > "$ENV_FILE"
 
         echo "Building images with tag: ${IMAGE_TAG}"
@@ -275,7 +275,7 @@ pipeline {
                     "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
                     "" \
                     "APP_PORT=${DEV_PORT}" \
-                    "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+                    "SERVER_HOST=127.0.0.1:${DEV_PORT}" \
                     > "$ENV_FILE"
 
                 echo "Deploying Dev image: ${IMAGE_TAG}"
@@ -416,7 +416,7 @@ pipeline {
             "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
             "" \
             "APP_PORT=${DEV_PORT}" \
-            "SERVER_HOST=${CURRENT_IP}:${DEV_PORT}" \
+            "SERVER_HOST=127.0.0.1:${DEV_PORT}" \
             > "$ENV_FILE"
 
         echo "Pushing Docker image tag: ${IMAGE_TAG}"
@@ -493,7 +493,7 @@ pipeline {
                     "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
                     "" \
                     "APP_PORT=${STAGING_PORT}" \
-                    "SERVER_HOST=${CURRENT_IP}:${STAGING_PORT}" \
+                    "SERVER_HOST=127.0.0.1:${STAGING_PORT}" \
                     > "$ENV_FILE"
 
                 docker compose \
@@ -644,7 +644,7 @@ pipeline {
                     "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
                     "" \
                     "APP_PORT=${PROD_PORT}" \
-                    "SERVER_HOST=${CURRENT_IP}:${PROD_PORT}" \
+                    "SERVER_HOST=127.0.0.1:${PROD_PORT}" \
                     > "$ENV_FILE"
 
                 docker compose \
