@@ -116,6 +116,7 @@ services:
         condition: service_healthy
     networks:
       - frontend-network
+      - prestashop-network
     healthcheck:
       test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 80) ? 0 : 1);'"]
       interval: 10s
@@ -133,7 +134,7 @@ services:
     volumes:
       - prestashop-db-data:/var/lib/mysql
     networks:
-      - frontend-network
+      - prestashop-network
     healthcheck:
       test:
         [
@@ -151,6 +152,9 @@ networks:
 
   wordpress-network:
     driver: bridge
+
+  prestashop-network:
+    driver: bridge  
 
 volumes:
   wordpress-db-data:
