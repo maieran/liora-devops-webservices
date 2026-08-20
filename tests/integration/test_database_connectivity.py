@@ -75,8 +75,6 @@ APPLICATION_RESTART_TARGETS = [
     ),
 ]
 
-from tests.support.urls import join_url
-
 def compose_exec(
     project_root: Path,
     service: str,
@@ -484,16 +482,44 @@ def test_nginx_cannot_reach_databases(
         [
             "sh",
             "-c",
-            (
-                f"nc -z -w 3 {forbidden_database} 3306 "
-                "&& exit 1 || exit 0"
-            ),
+            f"""
+            command -v nc >/dev/null 2>&1 || {{
+                echo "nc is not installed" >&2
+                exit 2
+            }}
+
+            nc -z -w 3 {forbidden_database} 3306
+            result=$?
+
+            case "$result" in
+                0)
+                    echo "Unexpected connection succeeded" >&2
+                    exit 1
+                    ;;
+                1)
+                    echo "Connection correctly blocked"
+                    exit 0
+                    ;;
+                *)
+                    echo "Network test could not be executed reliably" >&2
+                    exit 2
+                    ;;
+            esac
+            """,
         ],
+    )
+
+    assert result.returncode != 2, (
+        "Network isolation test could not be executed:\n"
+        f"STDOUT:\n{result.stdout}\n"
+        f"STDERR:\n{result.stderr}"
     )
 
     assert result.returncode == 0, (
         f"nginx unexpectedly reached "
-        f"{forbidden_database}:3306"
+        f"{forbidden_database}:3306\n"
+        f"STDOUT:\n{result.stdout}\n"
+        f"STDERR:\n{result.stderr}"
     )
 
 @pytest.mark.parametrize(
