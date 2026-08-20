@@ -9,3 +9,6 @@
 __pycache__/
 *.py[cod]
 reports/
+.env.ci
+.env.staging
+.DS_Store
