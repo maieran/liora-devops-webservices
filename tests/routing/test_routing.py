@@ -5,11 +5,6 @@ from urllib.parse import urlparse
 import pytest
 import requests
 
-from tests.support.assets import (
-    extract_asset_references,
-    internal_asset_urls,
-)
-
 from tests.support.urls import (
     join_url,
     same_origin,
@@ -32,12 +27,12 @@ SUBPATH_APPLICATIONS = [
     ("application", "public_path"),
     APPLICATION_PATHS,
 )
-def test_application_final_url_stays_under_public_path(
+def test_application_final_url_stays_on_same_origin(
     base_url: str,
     application: str,
     public_path: str,
 ) -> None:
-    """Redirects must remain underneath the application's public path."""
+    """Application redirects must stay on the public origin."""
 
     application_url = join_url(
         base_url,
@@ -52,11 +47,12 @@ def test_application_final_url_stays_under_public_path(
 
     assert response.status_code == 200
 
-    final_path = urlparse(response.url).path
-
-    assert final_path.startswith(public_path), (
-        f"{application} escaped its public path "
-        f"{public_path}: {response.url}"
+    assert same_origin(
+        base_url,
+        response.url,
+    ), (
+        f"{application} redirected outside "
+        f"the expected origin: {response.url}"
     )
 
 
@@ -64,7 +60,7 @@ def test_application_final_url_stays_under_public_path(
     ("application", "public_path"),
     SUBPATH_APPLICATIONS,
 )
-def test_application_final_url_stays_under_public_path(
+def test_subpath_application_final_url_stays_under_public_path(
     base_url: str,
     application: str,
     public_path: str,
@@ -88,7 +84,7 @@ def test_application_final_url_stays_under_public_path(
         f"{application} escaped its public path "
         f"{public_path}: {response.url}"
     )
-
+    
 def test_prestashop_is_reachable_at_root(
     base_url: str,
 ) -> None:
