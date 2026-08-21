@@ -39,6 +39,7 @@ pytestmark = pytest.mark.config
 
 ENVIRONMENTS = [
     "dev",
+    "staging",
     "prod",
 ]
 
@@ -86,10 +87,18 @@ def test_development_debug_modes_are_enabled(
     )
 
 
-def test_production_debug_modes_are_disabled(
+@pytest.mark.parametrize(
+    "environment",
+    [
+        "staging",
+        "prod",
+    ],
+)
+def test_non_development_debug_modes_are_disabled(
     compose_models,
+    environment: str,
 ) -> None:
-    services = compose_models["prod"]["services"]
+    services = compose_models[environment]["services"]
 
     assert (
         services["wordpress"]["environment"]["WORDPRESS_DEBUG"]
@@ -303,6 +312,7 @@ def test_nginx_publishes_internal_port_80(
     ("environment", "expected_domain"),
     [
         ("dev", "dev.liora.test:8080"),
+        ("staging", "staging.liora.test:8080"),
         ("prod", "prod.liora.test:8080"),
     ],
 )

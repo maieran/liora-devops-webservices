@@ -19,12 +19,11 @@ def project_root() -> Path:
 
     return Path(__file__).resolve().parents[1]
 
-# TODO: Add staging environment later if the project introduces one.
 @pytest.fixture(scope="session")
 def compose_models(
     project_root: Path,
 ) -> dict[str, ComposeModel]:
-    """Render Development and Production Compose models."""
+    """Render Development, Staging and Production Compose models."""
 
     fixtures = project_root / "tests" / "fixtures" / "env"
 
@@ -34,6 +33,12 @@ def compose_models(
             env_file=fixtures / "dev.env",
             override_file=project_root / "docker-compose.dev.yml",
             project_name="liora-config-dev",
+        ),
+        "staging": render_compose_config(
+            project_root=project_root,
+            env_file=fixtures / "staging.env",
+            override_file=project_root / "docker-compose.staging.yml",
+            project_name="liora-config-staging",
         ),
         "prod": render_compose_config(
             project_root=project_root,
