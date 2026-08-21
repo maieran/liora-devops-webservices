@@ -259,6 +259,9 @@ def test_required_service_network_connections(
         services["prestashop-db"]
     )
 
+    print("wordpress-db:", wordpress_db_networks)
+    print("prestashop-db:", prestashop_db_networks)
+
     # Reverse proxy can reach both applications.
     assert "frontend-network" in nginx_networks
     assert "frontend-network" in wordpress_networks
@@ -266,15 +269,18 @@ def test_required_service_network_connections(
 
     # WordPress communicates with its DB through a private network.
     assert "wordpress-network" in wordpress_networks
-    assert "wordpress-network" in wordpress_db_networks
 
     # PrestaShop communicates with its DB through a private network.
     assert "prestashop-network" in prestashop_networks
-    assert "prestashop-network" in prestashop_db_networks
 
-    # Databases must not be connected to the frontend network.
-    assert "frontend-network" not in wordpress_db_networks
-    assert "frontend-network" not in prestashop_db_networks
+    # Databases must only be connected to their own private networks.
+    assert wordpress_db_networks == {
+        "wordpress-network",
+    }
+
+    assert prestashop_db_networks == {
+        "prestashop-network",
+    }
 
 @pytest.mark.parametrize("environment", ENVIRONMENTS)
 def test_nginx_publishes_internal_port_80(
