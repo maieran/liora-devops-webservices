@@ -34,7 +34,7 @@ check_route() {
 
 check_route "Nginx" "/health"
 check_route "WordPress" "/wordpress/"
-check_route "PrestaShop" "/prestashop/"
+check_route "PrestaShop" "/"
 
 if [ "$FAILED" -ne 0 ]; then
     echo "One or more smoke tests failed."

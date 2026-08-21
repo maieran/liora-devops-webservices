@@ -199,3 +199,60 @@ chmod +x deploy.sh
 
 docker compose ps
 ```
+---
+
+# Docker Hub Images
+
+The CI/CD pipeline automatically builds and publishes the following Docker images:
+
+- shabbyalaei/liora-nginx
+- shabbyalaei/liora-wordpress
+- shabbyalaei/liora-prestashop
+
+Images are versioned using the Jenkins build number and the latest tag.
+
+---
+
+# CI/CD Pipeline
+
+The Jenkins pipeline performs the following stages automatically:
+
+1. Pipeline Check
+2. Environment Information
+3. Prepare Environment Files
+4. Validate Docker Compose Files
+5. Build Docker Images
+6. Deploy Development Environment
+7. Run Health Checks
+8. Run Smoke Tests
+9. Docker Hub Login
+10. Push Docker Images
+11. Deploy to Staging
+12. Test Staging
+13. Manual Production Approval
+14. Deploy to Production
+15. Test Production
+
+---
+
+# Project Structure
+
+```text
+liora-devops-webservices/
+│
+├── docker-setup/
+│   ├── nginx/
+│   ├── wordpress/
+│   └── prestashop/
+│
+├── tests/
+│   ├── health/
+│   └── smoke/
+│
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── docker-compose.staging.yml
+├── docker-compose.prod.yml
+├── Jenkinsfile
+├── deploy.sh
+└── README.md

@@ -1,0 +1,14 @@
+services:
+  wordpress:
+    environment:
+      WORDPRESS_DEBUG: "0"
+
+  prestashop:
+    environment:
+      PS_DEV_MODE: "0"
+
+  nginx: {}
+
+  wordpress-db: {}
+
+  prestashop-db: {}

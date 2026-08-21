@@ -1,8 +1,14 @@
 .env
 .env.dev
 .env.prod
+<<<<<<< HEAD
 .DS_Store
 
 secret.yaml
 secrets.yaml
 passwords.txt
+=======
+.env.ci
+.env.staging
+.DS_Store
+>>>>>>> origin/main
