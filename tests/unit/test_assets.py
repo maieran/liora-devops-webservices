@@ -49,7 +49,7 @@ def test_internal_asset_urls_excludes_external_and_data_urls() -> None:
 
     result = internal_asset_urls(
         base_url="http://localhost:8080",
-        page_url="http://localhost:8080/prestashop/",
+        page_url="http://localhost:8080/",
         references=references,
     )
 
@@ -61,7 +61,7 @@ def test_internal_asset_urls_excludes_external_and_data_urls() -> None:
 def test_internal_asset_urls_removes_duplicate_results() -> None:
     result = internal_asset_urls(
         base_url="http://localhost:8080",
-        page_url="http://localhost:8080/prestashop/",
+        page_url="http://localhost:8080/",
         references=[
             "/img/logo.png",
             "/img/logo.png",
