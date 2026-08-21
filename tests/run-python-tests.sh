@@ -67,6 +67,7 @@ case "$SUITE" in
         "$0" static
         "$0" runtime
         "$0" integration
+        "$0" network
         ;;
 
     *)
