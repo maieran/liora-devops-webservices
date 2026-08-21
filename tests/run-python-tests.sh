@@ -27,7 +27,6 @@ case "$SUITE" in
 
         python -m pytest \
             -m "unit or config" \
-            -k "not required_service_network_connections" \
             --junitxml="$REPORT_DIR/static.xml"
         ;;
 
@@ -51,7 +50,7 @@ case "$SUITE" in
             -m "integration and docker and not network" \
             --junitxml="$REPORT_DIR/integration.xml"
         ;;
-        
+
     network)
         echo "Running network isolation tests..."
 
