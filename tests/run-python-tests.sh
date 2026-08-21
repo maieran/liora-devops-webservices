@@ -10,6 +10,16 @@ mkdir -p "$REPORT_DIR"
 
 SUITE="${1:-}"
 
+require_docker_runtime() {
+    : "${RUNTIME_PROJECT_NAME:?RUNTIME_PROJECT_NAME must be set for Docker runtime tests}"
+    : "${RUNTIME_ENV_FILE:?RUNTIME_ENV_FILE must be set for Docker runtime tests}"
+
+    if [[ ! -f "$RUNTIME_ENV_FILE" ]]; then
+        echo "RUNTIME_ENV_FILE does not exist: $RUNTIME_ENV_FILE" >&2
+        exit 2
+    fi
+}
+
 case "$SUITE" in
 
     static)
@@ -35,14 +45,17 @@ case "$SUITE" in
         echo "Running functional Docker integration tests..."
 
         : "${BASE_URL:?BASE_URL must be set for integration tests}"
+        require_docker_runtime
 
         python -m pytest \
             -m "integration and docker and not network" \
             --junitxml="$REPORT_DIR/integration.xml"
         ;;
-
+        
     network)
         echo "Running network isolation tests..."
+
+        require_docker_runtime
 
         python -m pytest \
             -m "integration and docker and network" \
