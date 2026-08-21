@@ -105,3 +105,39 @@ def test_prestashop_is_reachable_at_root(
         "PrestaShop root redirected outside "
         f"the expected origin: {response.url}"
     )
+
+def test_prestashop_alias_redirects_to_trailing_slash(
+    base_url: str,
+) -> None:
+    """The /prestashop alias must redirect to /prestashop/."""
+
+    response = requests.get(
+        join_url(base_url, "/prestashop"),
+        timeout=10,
+        allow_redirects=False,
+    )
+
+    assert response.status_code == 301
+
+    assert response.headers["Location"] == "/prestashop/"
+
+def test_prestashop_alias_is_reachable(
+    base_url: str,
+) -> None:
+    """The optional /prestashop/ alias must still reach PrestaShop."""
+
+    response = requests.get(
+        join_url(base_url, "/prestashop/"),
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    assert same_origin(
+        base_url,
+        response.url,
+    ), (
+        "PrestaShop alias redirected outside "
+        f"the expected origin: {response.url}"
+    )
