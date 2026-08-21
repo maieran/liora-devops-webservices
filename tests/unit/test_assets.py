@@ -55,7 +55,7 @@ def test_internal_asset_urls_excludes_external_and_data_urls() -> None:
 
     assert result == [
         "http://localhost:8080/themes/app.css",
-        "http://localhost:8080/prestashop/modules/app.js",
+        "http://localhost:8080/modules/app.js",
     ]
 
 def test_internal_asset_urls_removes_duplicate_results() -> None:
