@@ -39,7 +39,7 @@ def test_join_url_avoids_duplicate_slashes() -> None:
 
 def test_resolve_url_handles_root_relative_reference() -> None:
     result = resolve_url(
-        ""http://localhost:8080/",
+        "http://localhost:8080/",
         "/themes/classic/theme.css",
     )
 
