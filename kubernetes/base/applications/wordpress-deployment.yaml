@@ -88,8 +88,9 @@ spec:
                     'WP_SITEURL',
                     $publicProto . '://' . $publicHost . '/wordpress'
                 );
-          # to prevent eternal redirect loop with httpGet that leads into a CrashLoopBackOff of the deployment resource
-          # replaced with tcp probes because endpoint reachability via http should be confirmed in the tests
+          # Use TCP probes to avoid application redirect behavior
+          # interfering with Kubernetes lifecycle checks.
+          # Public HTTP reachability is validated through Nginx.
           startupProbe:
             tcpSocket:
               port: 80
