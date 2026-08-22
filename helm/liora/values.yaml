@@ -25,3 +25,18 @@ prestashop:
   devMode: false
 
   publicHost: ""
+
+prestashopDatabase:
+  replicaCount: 1
+
+  image:
+    repository: mysql
+    tag: "8.0.42"
+    pullPolicy: IfNotPresent
+
+  service:
+    port: 3306
+
+  storage:
+    size: 1Gi
+    accessMode: ReadWriteOnce
