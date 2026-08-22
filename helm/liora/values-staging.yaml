@@ -2,3 +2,4 @@ environment: staging
 
 prestashop:
   devMode: false
+  

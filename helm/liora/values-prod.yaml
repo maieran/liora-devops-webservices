@@ -2,3 +2,4 @@ environment: prod
 
 prestashop:
   devMode: false
+  
