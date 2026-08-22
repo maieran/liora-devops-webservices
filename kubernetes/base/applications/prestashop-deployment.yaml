@@ -72,8 +72,20 @@ spec:
             - name: PS_DEV_MODE
               value: "1"
 
+            - name: PUBLIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: prestashop-configmap
+                  key: PUBLIC_HOST
+
+            - name: NGINX_NODE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: prestashop-configmap
+                  key: NGINX_NODE_PORT
+
             - name: PS_DOMAIN
-              value: "YOUR_NODE_IP:30080"
+              value: "$(PUBLIC_HOST):$(NGINX_NODE_PORT)"
 
           # HTTP probes on "/" follow WordPress redirects to /wordpress/...,
           # causing the liveness probe to fail and the container to restart.

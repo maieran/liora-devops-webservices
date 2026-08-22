@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: prestashop-configmap
+  namespace: liora-dev
+
+data:
+  PUBLIC_HOST: "YOUR_PUBLIC_NODE_IP"
+  NGINX_NODE_PORT: "30080"
