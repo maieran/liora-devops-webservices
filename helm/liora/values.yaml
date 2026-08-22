@@ -4,6 +4,13 @@ secrets:
   existingSecret: liora-db-secrets
 
 nginx:
+  replicaCount: 1
+
+  image:
+    repository: andrem43/nginx-kubernetes
+    tag: base
+    pullPolicy: IfNotPresent
+
   service:
     type: NodePort
     port: 80
