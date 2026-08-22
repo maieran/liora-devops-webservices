@@ -77,3 +77,6 @@ wordpressDatabase:
   storage:
     size: 1Gi
     accessMode: ReadWriteOnce
+
+networkPolicy:
+  enabled: true
