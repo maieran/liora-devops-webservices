@@ -1,0 +1,9 @@
+environment: dev
+
+nginx:
+  service:
+    type: NodePort
+    nodePort: 30080
+
+prestashop:
+  devMode: true

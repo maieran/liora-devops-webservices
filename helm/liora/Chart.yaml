@@ -1,0 +1,11 @@
+apiVersion: v2
+
+name: liora
+
+description: Helm chart for the Liora WordPress and PrestaShop platform
+
+type: application
+
+version: 0.1.0
+
+appVersion: "1.0.0"

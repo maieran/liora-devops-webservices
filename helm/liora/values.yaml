@@ -1,0 +1,27 @@
+environment: dev
+
+secrets:
+  existingSecret: liora-db-secrets
+
+nginx:
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30080
+
+prestashop:
+  replicaCount: 1
+
+  image:
+    repository: andrem43/prestashop-kubernetes
+    tag: base
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  installAuto: true
+  devMode: false
+
+  publicHost: ""
