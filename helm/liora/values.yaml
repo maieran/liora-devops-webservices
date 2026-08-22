@@ -30,8 +30,12 @@ prestashop:
 
   installAuto: true
   devMode: false
-
   publicHost: ""
+
+  startupProbe:
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 72
 
 prestashopDatabase:
   replicaCount: 1

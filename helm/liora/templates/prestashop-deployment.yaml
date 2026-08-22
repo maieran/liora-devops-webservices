@@ -90,9 +90,9 @@ spec:
           startupProbe:
             tcpSocket:
               port: http
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 24
+            periodSeconds: {{ .Values.prestashop.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.prestashop.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.prestashop.startupProbe.failureThreshold }}
 
           readinessProbe:
             tcpSocket:
