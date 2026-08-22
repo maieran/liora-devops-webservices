@@ -53,6 +53,7 @@ data:
         }
 
         # Optional PrestaShop alias.
+        # PrestaShop remains canonically served from /.
         location = /prestashop {
             return 301 /prestashop/;
         }
