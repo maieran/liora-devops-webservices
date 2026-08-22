@@ -72,12 +72,24 @@ spec:
             - name: PS_DEV_MODE
               value: "1"
 
-            - name: PS_DOMAIN
-              value: "YOUR_NODE_IP:30080"
+            - name: PUBLIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: prestashop-configmap
+                  key: PUBLIC_HOST
 
-          # HTTP probes on "/" follow WordPress redirects to /wordpress/...,
-          # causing the liveness probe to fail and the container to restart.
-          # Use TCP probes here; HTTP routing is validated externally through Nginx by runtime tests.
+            - name: NGINX_NODE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: prestashop-configmap
+                  key: NGINX_NODE_PORT
+
+            - name: PS_DOMAIN
+              value: "$(PUBLIC_HOST):$(NGINX_NODE_PORT)"
+
+          # Use TCP probes for container-level health checks.
+          # Public HTTP routing and application behavior are validated
+          # externally through Nginx by the runtime tests.
           startupProbe:
             tcpSocket:
               port: http

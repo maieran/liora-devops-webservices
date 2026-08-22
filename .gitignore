@@ -6,3 +6,6 @@
 secret.yaml
 secrets.yaml
 passwords.txt
+.env.ci
+.env.staging
+.DS_Store

@@ -20,29 +20,37 @@ spec:
     spec:
       initContainers:
         - name: wait-for-applications
-          image: busybox:1.36
+          image: curlimages/curl:8.10.1
 
           command:
             - sh
             - -c
             - |
-              echo "Waiting for WordPress..."
+              echo "Waiting for WordPress HTTP endpoint..."
 
-              until nc -z wordpress-app-service 80; do
-                echo "wordpress-app-service is not ready yet..."
+              until curl -fsS \
+                --connect-timeout 3 \
+                --max-time 5 \
+                -o /dev/null \
+                http://wordpress-app-service/; do
+                echo "wordpress-app-service is not ready over HTTP yet..."
                 sleep 2
               done
 
-              echo "WordPress is reachable."
+              echo "WordPress is reachable over HTTP."
 
-              echo "Waiting for PrestaShop..."
+              echo "Waiting for PrestaShop HTTP endpoint..."
 
-              until nc -z prestashop-app-service 80; do
-                echo "prestashop-app-service is not ready yet..."
+              until curl -fsS \
+                --connect-timeout 3 \
+                --max-time 5 \
+                -o /dev/null \
+                http://prestashop-app-service/; do
+                echo "prestashop-app-service is not ready over HTTP yet..."
                 sleep 2
               done
 
-              echo "PrestaShop is reachable."
+              echo "PrestaShop is reachable over HTTP."
 
       containers:
         - name: nginx-deployment

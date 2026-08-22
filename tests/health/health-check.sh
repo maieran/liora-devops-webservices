@@ -22,7 +22,7 @@ check_url() {
 
 check_url "Nginx" "$BASE_URL/health"
 check_url "WordPress" "$BASE_URL/wordpress/"
-check_url "PrestaShop" "$BASE_URL/prestashop/"
+check_url "PrestaShop" "$BASE_URL/"
 
 echo
 echo "All health checks completed successfully."
