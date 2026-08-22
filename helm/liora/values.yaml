@@ -40,3 +40,33 @@ prestashopDatabase:
   storage:
     size: 1Gi
     accessMode: ReadWriteOnce
+
+wordpress:
+  replicaCount: 1
+
+  image:
+    repository: andrem43/wordpress-kubernetes
+    tag: base
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  debug: false
+
+
+wordpressDatabase:
+  replicaCount: 1
+
+  image:
+    repository: mysql
+    tag: "8.0.42"
+    pullPolicy: IfNotPresent
+
+  service:
+    port: 3306
+
+  storage:
+    size: 1Gi
+    accessMode: ReadWriteOnce

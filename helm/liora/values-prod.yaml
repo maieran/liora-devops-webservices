@@ -1,5 +1,7 @@
 environment: prod
 
+wordpress:
+  debug: false
+
 prestashop:
   devMode: false
-  

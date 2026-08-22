@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: wordpress-db
+
+spec:
+  serviceName: wordpress-db-service-headless
+  replicas: {{ .Values.wordpressDatabase.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: wordpress-db
+
+  template:
+    metadata:
+      labels:
+        app: wordpress-db
+
+    spec:
+      containers:
+        - name: mysql
+
+          image: "{{ .Values.wordpressDatabase.image.repository }}:{{ .Values.wordpressDatabase.image.tag }}"
+          imagePullPolicy: {{ .Values.wordpressDatabase.image.pullPolicy }}
+
+          ports:
+            - name: mysql
+              containerPort: {{ .Values.wordpressDatabase.service.port }}
+
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: WORDPRESS_DB_NAME
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: WORDPRESS_DB_USER
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: WORDPRESS_DB_PASSWORD
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: WORDPRESS_DB_ROOT_PASSWORD
+
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"
+
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 10
+
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"
+
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
+
+          volumeMounts:
+            - name: wordpress-db-data
+              mountPath: /var/lib/mysql
+
+  volumeClaimTemplates:
+    - metadata:
+        name: wordpress-db-data
+
+      spec:
+        accessModes:
+          - {{ .Values.wordpressDatabase.storage.accessMode | quote }}
+
+        resources:
+          requests:
+            storage: {{ .Values.wordpressDatabase.storage.size | quote }}
+
