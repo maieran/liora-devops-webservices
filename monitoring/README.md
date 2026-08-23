@@ -2,25 +2,27 @@
 
 Monitoring and observability setup for the Liora Kubernetes environments.
 
-This setup provides:
+The monitoring configuration is stored in Git and is designed to be reproducible on the final Proxmox/Kubernetes environment.
+
+## What is included
 
 - Prometheus
 - Grafana
 - kube-state-metrics
 - node-exporter
 - Prometheus Blackbox Exporter
-- Custom Grafana dashboard
+- Liora Grafana dashboard
 - Custom Prometheus alert rules
-
-The monitoring configuration is stored in Git so it can later be deployed reproducibly on the final Proxmox/Kubernetes environment.
+- Reproducible deployment script
 
 ---
 
-## Directory Structure
+## Directory structure
 
 ```text
 monitoring/
 ├── README.md
+├── deploy-monitoring.sh
 ├── values.yaml
 ├── blackbox-values.yaml
 ├── blackbox-values-liora.yaml
@@ -32,102 +34,114 @@ monitoring/
 
 ---
 
-## Helm Chart Versions
+# 1. Prerequisites
+
+The machine or CI runner executing the monitoring deployment needs:
+
+```text
+kubectl
+helm
+jq          # only required for some verification commands
+```
+
+It also needs a working Kubernetes context:
+
+```bash
+kubectl cluster-info
+kubectl get nodes
+```
+
+The deployment script manages the Prometheus Community Helm repository automatically.
+
+Pinned Helm chart versions:
 
 ```text
 kube-prometheus-stack:        88.5.3
 prometheus-blackbox-exporter: 11.17.2
 ```
 
-Add the Prometheus Community Helm repository:
-
-```bash
-helm repo add prometheus-community \
-  https://prometheus-community.github.io/helm-charts
-
-helm repo update
-```
-
 ---
 
-# 1. Install Prometheus and Grafana
+# 2. Recommended deployment method
 
-Run from the repository root:
-
-```bash
-helm upgrade --install monitoring \
-  prometheus-community/kube-prometheus-stack \
-  --version 88.5.3 \
-  --namespace monitoring \
-  --create-namespace \
-  -f monitoring/values.yaml
-```
-
-Check the monitoring Pods:
-
-```bash
-kubectl get pods -n monitoring
-```
-
-Expected components include:
+Use:
 
 ```text
-Grafana
-Prometheus
-Prometheus Operator
-kube-state-metrics
-node-exporter
+monitoring/deploy-monitoring.sh
 ```
 
-The current `values.yaml` is intentionally lightweight for the development environment.
+Do not manually recreate the monitoring stack unless troubleshooting.
 
-Important settings:
+The script is idempotent and uses:
 
-- Prometheus retention: 1 day
-- Prometheus retention size: 1 GB
-- Grafana persistence: disabled
-- Alertmanager: disabled
-- K3s-incompatible control-plane monitors: disabled
+```text
+helm upgrade --install
+kubectl apply
+```
+
+so it can be run again to reconcile an existing installation.
+
+Make sure the script is executable:
+
+```bash
+chmod +x monitoring/deploy-monitoring.sh
+```
+
+Syntax check:
+
+```bash
+bash -n monitoring/deploy-monitoring.sh
+```
 
 ---
 
-# 2. Install Blackbox Exporter
+# 3. Deployment modes
 
-Blackbox Exporter is used to perform HTTP availability checks.
+The script supports two modes.
 
-Two separate values files exist.
+## Lab mode
 
-## Development / Lab Configuration
+Use this on a development cluster where the Liora application namespaces are not deployed.
 
-`monitoring/blackbox-values.yaml`
+```bash
+./monitoring/deploy-monitoring.sh lab
+```
 
-This configuration contains a temporary Grafana health endpoint used to prove the monitoring flow:
+Lab mode uses:
+
+```text
+monitoring/blackbox-values.yaml
+```
+
+It probes the Grafana health endpoint to verify:
 
 ```text
 Blackbox Exporter
-      ↓
+       ↓
 Prometheus
-      ↓
+       ↓
 Grafana
 ```
 
-Install it with:
+This mode was used to validate the monitoring setup on the EC2 development cluster.
+
+---
+
+## Liora mode
+
+Use this on the Kubernetes cluster where the real Liora environments are deployed.
 
 ```bash
-helm upgrade --install monitoring-blackbox \
-  prometheus-community/prometheus-blackbox-exporter \
-  --version 11.17.2 \
-  --namespace monitoring \
-  -f monitoring/blackbox-values.yaml
+./monitoring/deploy-monitoring.sh liora
 ```
 
-This configuration is mainly intended for the EC2 development environment.
+Liora mode uses:
 
-## Liora Environment Configuration
+```text
+monitoring/blackbox-values-liora.yaml
+```
 
-`monitoring/blackbox-values-liora.yaml`
-
-This configuration contains the real application probes for:
+It expects these namespaces to exist:
 
 ```text
 liora-dev
@@ -135,7 +149,15 @@ liora-staging
 liora-prod
 ```
 
-For every environment, Blackbox checks the public application routes through NGINX:
+It also expects the NGINX Service to be named:
+
+```text
+nginx-service
+```
+
+in each Liora namespace.
+
+Blackbox probes these routes through NGINX:
 
 ```text
 NGINX       /health
@@ -143,7 +165,7 @@ PrestaShop  /
 WordPress   /wordpress/
 ```
 
-Example:
+Examples:
 
 ```text
 http://nginx-service.liora-dev.svc.cluster.local/health
@@ -153,23 +175,92 @@ http://nginx-service.liora-dev.svc.cluster.local/wordpress/
 
 The same pattern is used for staging and production.
 
-Install it only on a cluster where the Liora namespaces already exist:
-
-```bash
-helm upgrade --install monitoring-blackbox \
-  prometheus-community/prometheus-blackbox-exporter \
-  --version 11.17.2 \
-  --namespace monitoring \
-  -f monitoring/blackbox-values-liora.yaml
-```
-
-Do not use this file on the EC2 lab while the Liora application namespaces are absent, otherwise all real Liora probes will intentionally fail.
+> Important: deploy the Liora application namespaces before running `liora` mode. If the namespaces or `nginx-service` do not exist yet, the application probes will fail.
 
 ---
 
-# 3. Blackbox Labels
+# 4. CI/CD deployment order
 
-Each Liora probe receives labels that make dashboard filtering and alerting possible.
+For Jenkins or another CI/CD system, the intended order is:
+
+```text
+1. Kubernetes infrastructure is available
+2. kubectl context is configured
+3. Liora Dev / Staging / Prod are deployed
+4. Run monitoring deployment in liora mode
+5. Verify monitoring resources
+```
+
+Monitoring command:
+
+```bash
+./monitoring/deploy-monitoring.sh liora
+```
+
+The monitoring script does not provision Proxmox infrastructure and does not deploy the Liora application itself.
+
+It only deploys/reconciles the monitoring stack.
+
+---
+
+# 5. What the deployment script does
+
+`deploy-monitoring.sh` performs the following steps:
+
+```text
+1. Adds/updates the Prometheus Community Helm repository
+2. Installs/upgrades Prometheus and Grafana
+3. Installs/upgrades Blackbox Exporter
+4. Applies the custom Prometheus alert rules
+5. Creates/updates the Grafana dashboard ConfigMap
+6. Labels the dashboard ConfigMap for Grafana discovery
+7. Prints monitoring deployment status
+```
+
+Monitoring namespace:
+
+```text
+monitoring
+```
+
+Helm releases:
+
+```text
+monitoring
+monitoring-blackbox
+```
+
+---
+
+# 6. Main Prometheus/Grafana configuration
+
+Main values file:
+
+```text
+monitoring/values.yaml
+```
+
+The current setup is intentionally lightweight.
+
+Important settings:
+
+```text
+Prometheus retention:       1 day
+Prometheus retention size:  1 GB
+Grafana persistence:        disabled
+Prometheus persistence:     disabled
+Alertmanager:               disabled
+```
+
+K3s-specific control-plane monitors that are not exposed in the same way as a standard Kubernetes installation are disabled.
+
+For the final production environment, persistence and retention can be increased if enough storage and memory are available.
+
+---
+
+# 7. Blackbox labels
+
+The real Liora probes receive labels used by Grafana and Prometheus alerts.
 
 Example:
 
@@ -195,7 +286,7 @@ staging
 prod
 ```
 
-Example Prometheus query:
+Example query:
 
 ```promql
 probe_success{
@@ -204,90 +295,51 @@ probe_success{
 }
 ```
 
+The Liora configuration renders:
+
+```text
+3 applications × 3 environments = 9 ServiceMonitors
+```
+
 ---
 
-# 4. Deploy the Grafana Dashboard
+# 8. Grafana dashboard
 
-The dashboard is stored in Git:
+Dashboard source of truth:
 
 ```text
 monitoring/dashboards/liora-overview.json
 ```
 
-The JSON file is the source of truth.
-
-Create or update the ConfigMap:
-
-```bash
-kubectl create configmap liora-overview-dashboard \
-  -n monitoring \
-  --from-file=liora-overview.json=monitoring/dashboards/liora-overview.json \
-  --dry-run=client \
-  -o yaml \
-| kubectl apply -f -
-```
-
-Add the Grafana dashboard discovery label:
-
-```bash
-kubectl label configmap \
-  liora-overview-dashboard \
-  -n monitoring \
-  grafana_dashboard=1 \
-  --overwrite
-```
-
-Verify:
-
-```bash
-kubectl get configmap \
-  liora-overview-dashboard \
-  -n monitoring \
-  --show-labels
-```
-
-Expected label:
+The deployment script creates/updates:
 
 ```text
-grafana_dashboard=1
+ConfigMap: liora-overview-dashboard
+Namespace: monitoring
+Label:     grafana_dashboard=1
 ```
 
-Grafana automatically reloads the dashboard through its dashboard sidecar.
+Grafana's dashboard sidecar discovers the ConfigMap and loads the dashboard automatically.
 
-## Verify Dashboard Reload
+## Important
 
-Find the Grafana Pod:
+The provisioned `Liora Overview` dashboard is intentionally read-only in the Grafana UI.
 
-```bash
-GRAFANA_POD=$(kubectl get pod \
-  -n monitoring \
-  -l app.kubernetes.io/name=grafana \
-  -o jsonpath='{.items[0].metadata.name}')
-```
+Do not treat manual UI changes to the provisioned dashboard as the source of truth.
 
-Check the sidecar logs:
-
-```bash
-kubectl logs \
-  -n monitoring \
-  "$GRAFANA_POD" \
-  -c grafana-sc-dashboard \
-  --tail=20
-```
-
-Expected output includes:
+Permanent changes should be made to:
 
 ```text
-Writing /tmp/dashboards/liora-overview.json
-Dashboards config reloaded
-200 OK
+monitoring/dashboards/liora-overview.json
 ```
+
+and redeployed.
 
 ---
 
-# 5. Liora Overview Dashboard
+## Dashboard panels
 
-The `Liora Overview` dashboard contains 11 panels.
+The dashboard contains 11 panels:
 
 ```text
 1. Ready Pods
@@ -305,7 +357,7 @@ The `Liora Overview` dashboard contains 11 panels.
 
 The dashboard uses the `$namespace` variable.
 
-Example namespaces:
+Expected Liora values:
 
 ```text
 liora-dev
@@ -313,42 +365,24 @@ liora-staging
 liora-prod
 ```
 
-When the user changes the namespace, Kubernetes metrics and application availability panels follow the selected environment.
+---
 
-## Application Availability States
+## Availability states
 
-The three Blackbox availability panels use:
+The application panels use:
 
 ```text
 UP     HTTP probe succeeded
 DOWN   HTTP probe failed
-N/A    No matching Liora probe exists
+N/A    No matching Liora probe exists for the selected namespace
 ```
 
-Example NGINX query:
+Example query:
 
 ```promql
 probe_success{
   liora_namespace="$namespace",
   application="nginx"
-} or on() vector(-1)
-```
-
-Example WordPress query:
-
-```promql
-probe_success{
-  liora_namespace="$namespace",
-  application="wordpress"
-} or on() vector(-1)
-```
-
-Example PrestaShop query:
-
-```promql
-probe_success{
-  liora_namespace="$namespace",
-  application="prestashop"
 } or on() vector(-1)
 ```
 
@@ -360,11 +394,13 @@ Mappings:
  1 → UP
 ```
 
+Seeing `N/A` in lab mode is expected because the real Liora probes are not installed there.
+
 ---
 
-# 6. Grafana Access
+# 9. Grafana access
 
-Forward Grafana locally:
+Port-forward Grafana:
 
 ```bash
 kubectl port-forward \
@@ -396,46 +432,23 @@ kubectl get secret monitoring-grafana \
 echo
 ```
 
-Do not store the generated password in Git.
+Do not commit or paste the generated password into Git or CI logs.
 
-Rotate it before using the monitoring stack in a persistent production environment.
+Rotate credentials before using the stack as a persistent production environment.
 
 ---
 
-# 7. Deploy Custom Prometheus Alerts
+# 10. Prometheus alert rules
 
-The custom alert rules are stored in:
+Alert rules:
 
 ```text
 monitoring/rules/liora-alerts.yaml
 ```
 
-Deploy them:
+They are automatically applied by `deploy-monitoring.sh`.
 
-```bash
-kubectl apply \
-  -f monitoring/rules/liora-alerts.yaml
-```
-
-Verify:
-
-```bash
-kubectl get prometheusrule \
-  -n monitoring \
-  liora-alerts
-```
-
-List all custom alerts:
-
-```bash
-kubectl get prometheusrule \
-  -n monitoring \
-  liora-alerts \
-  -o json \
-| jq -r '.spec.groups[].rules[].alert'
-```
-
-Expected:
+Custom alerts:
 
 ```text
 LioraEndpointDown
@@ -445,21 +458,9 @@ LioraPVCNotBound
 NodeHighMemory
 ```
 
----
-
-# 8. Custom Alert Rules
-
 ## LioraEndpointDown
 
-Triggers when a monitored Liora HTTP endpoint fails continuously for more than 2 minutes.
-
-Covers:
-
-```text
-NGINX
-WordPress
-PrestaShop
-```
+Triggers when a monitored Liora HTTP endpoint fails for more than 2 minutes.
 
 Severity:
 
@@ -469,7 +470,7 @@ critical
 
 ## LioraPodRestarting
 
-Triggers when a Liora Pod restarts more than twice during a 15-minute period and the condition persists.
+Triggers when a Liora Pod restarts more than twice during a 15-minute window and the condition persists.
 
 Severity:
 
@@ -509,9 +510,105 @@ warning
 
 ---
 
-# 9. Verify Prometheus Loaded the Rules
+# 11. Alertmanager
 
-Forward Prometheus:
+Alertmanager is currently disabled.
+
+Therefore:
+
+```text
+Prometheus evaluates alert rules      YES
+Alerts can become pending/firing      YES
+Notifications are sent               NO
+```
+
+The rules can still be inspected in Prometheus and Grafana.
+
+Alertmanager can be enabled later on the final Proxmox infrastructure when a notification destination such as email or Slack has been selected.
+
+---
+
+# 12. Quick validation after deployment
+
+Check monitoring Pods:
+
+```bash
+kubectl get pods -n monitoring
+```
+
+All Pods should be `Running` and their containers should be ready.
+
+Check Helm releases:
+
+```bash
+helm list -n monitoring
+```
+
+Expected releases:
+
+```text
+monitoring
+monitoring-blackbox
+```
+
+Check Helm history:
+
+```bash
+helm history monitoring -n monitoring
+helm history monitoring-blackbox -n monitoring
+```
+
+> `helm history monitoring` without `-n monitoring` can report `release: not found`.
+
+Check Services:
+
+```bash
+kubectl get svc -n monitoring
+```
+
+Check ServiceMonitors:
+
+```bash
+kubectl get servicemonitor -n monitoring
+```
+
+Lab mode should contain the Grafana health ServiceMonitor.
+
+Liora mode should contain the nine Liora application ServiceMonitors.
+
+Check custom PrometheusRule:
+
+```bash
+kubectl get prometheusrule \
+  -n monitoring \
+  liora-alerts
+```
+
+List custom alert names:
+
+```bash
+kubectl get prometheusrule \
+  -n monitoring \
+  liora-alerts \
+  -o json \
+| jq -r '.spec.groups[].rules[].alert'
+```
+
+Expected:
+
+```text
+LioraEndpointDown
+LioraPodRestarting
+LioraDeploymentUnavailable
+LioraPVCNotBound
+NodeHighMemory
+```
+
+---
+
+# 13. Verify Prometheus loaded the rules
+
+Port-forward Prometheus:
 
 ```bash
 kubectl port-forward \
@@ -533,89 +630,87 @@ curl -s http://localhost:9090/api/v1/rules \
 '
 ```
 
-Expected when no alert condition is active:
+Healthy rules look like:
 
 ```text
-LioraEndpointDown            inactive    ok
-LioraPodRestarting           inactive    ok
-LioraDeploymentUnavailable   inactive    ok
-LioraPVCNotBound             inactive    ok
-NodeHighMemory               inactive    ok
+LioraEndpointDown             inactive    ok
+LioraPodRestarting            inactive    ok
+LioraDeploymentUnavailable    inactive    ok
+LioraPVCNotBound              inactive    ok
+NodeHighMemory                inactive    ok
 ```
 
 `inactive` means the alert condition is currently false.
 
-`ok` means Prometheus successfully loaded and evaluated the rule.
+`ok` means Prometheus loaded and can evaluate the rule.
 
 ---
 
-# 10. Alertmanager
+# 14. Verify dashboard provisioning
 
-Alertmanager is currently disabled in:
-
-```text
-monitoring/values.yaml
-```
-
-This means:
-
-```text
-Prometheus evaluates alert rules      YES
-Alerts can become pending/firing      YES
-Notifications are sent               NO
-```
-
-Alertmanager can be enabled later on the final Proxmox infrastructure and connected to a notification destination such as email or Slack.
-
-It is intentionally disabled in the small EC2 development environment to reduce resource usage.
-
----
-
-# 11. Quick Verification
-
-Check Pods:
+Check the ConfigMap label:
 
 ```bash
-kubectl get pods -n monitoring
-```
-
-Check Services:
-
-```bash
-kubectl get svc -n monitoring
-```
-
-Check ServiceMonitors:
-
-```bash
-kubectl get servicemonitor -n monitoring
-```
-
-Check PrometheusRules:
-
-```bash
-kubectl get prometheusrule -n monitoring
-```
-
-Check the custom rule:
-
-```bash
-kubectl get prometheusrule \
+kubectl get configmap \
+  liora-overview-dashboard \
   -n monitoring \
-  liora-alerts
+  --show-labels
+```
+
+Expected:
+
+```text
+grafana_dashboard=1
+```
+
+When running the deployment script repeatedly, this command may print:
+
+```text
+configmap/liora-overview-dashboard not labeled
+```
+
+This is not an error if the ConfigMap already has:
+
+```text
+grafana_dashboard=1
+```
+
+To verify Grafana reloaded the dashboard:
+
+```bash
+GRAFANA_POD=$(kubectl get pod \
+  -n monitoring \
+  -l app.kubernetes.io/name=grafana \
+  -o jsonpath='{.items[0].metadata.name}')
+```
+
+```bash
+kubectl logs \
+  -n monitoring \
+  "$GRAFANA_POD" \
+  -c grafana-sc-dashboard \
+  --tail=20
+```
+
+Healthy output includes:
+
+```text
+Writing /tmp/dashboards/liora-overview.json
+200 OK
+Dashboards config reloaded
 ```
 
 ---
 
-# 12. Useful Prometheus Queries
+# 15. Useful Prometheus queries
 
-Check all Blackbox probes:
+All Blackbox probes:
 
 ```promql
 probe_success
 ```
 
-Check one Liora environment:
+One Liora environment:
 
 ```promql
 probe_success{
@@ -623,7 +718,7 @@ probe_success{
 }
 ```
 
-Check NGINX:
+NGINX:
 
 ```promql
 probe_success{
@@ -631,7 +726,7 @@ probe_success{
 }
 ```
 
-Check WordPress:
+WordPress:
 
 ```promql
 probe_success{
@@ -639,7 +734,7 @@ probe_success{
 }
 ```
 
-Check PrestaShop:
+PrestaShop:
 
 ```promql
 probe_success{
@@ -647,7 +742,7 @@ probe_success{
 }
 ```
 
-Check container restarts during the last 15 minutes:
+Container restarts during the last 15 minutes:
 
 ```promql
 sum(
@@ -657,13 +752,13 @@ sum(
 )
 ```
 
-Check available node memory:
+Available node memory:
 
 ```promql
 node_memory_MemAvailable_bytes
 ```
 
-Check Ready Pods:
+Ready Pods:
 
 ```promql
 sum(
@@ -675,11 +770,9 @@ sum(
 
 ---
 
-# 13. Validate the Blackbox Helm Configuration
+# 16. Validate the Liora Blackbox configuration without installing it
 
-The real Liora Blackbox values file can be validated without installing it.
-
-Pull the pinned chart:
+This is useful before changing the real probe configuration.
 
 ```bash
 BLACKBOX_VERSION=11.17.2
@@ -710,7 +803,7 @@ helm template monitoring-blackbox \
   > /tmp/blackbox-liora-rendered.yaml
 ```
 
-Count the rendered ServiceMonitors:
+Count ServiceMonitors:
 
 ```bash
 grep '^kind: ServiceMonitor$' \
@@ -724,43 +817,131 @@ Expected:
 9
 ```
 
-This represents:
+---
 
-```text
-3 applications × 3 environments = 9 probes
+# 17. Troubleshooting
+
+## `helm history monitoring` says `release: not found`
+
+Use the monitoring namespace:
+
+```bash
+helm history monitoring -n monitoring
+```
+
+For Blackbox:
+
+```bash
+helm history monitoring-blackbox -n monitoring
 ```
 
 ---
 
-# 14. Deployment Notes
+## Grafana dashboard is read-only
 
-The current EC2 Kubernetes environment is used only as a development and validation environment.
+Expected behavior.
 
-The final project infrastructure is intended to run on Proxmox.
+The dashboard is provisioned from a Kubernetes ConfigMap.
 
-The monitoring configuration should therefore remain portable and reproducible from Git.
-
-Expected future deployment flow:
-
-```text
-Git repository
-      ↓
-CI/CD pipeline
-      ↓
-Kubernetes / Proxmox
-      ↓
-Prometheus + Grafana
-      ↓
-Blackbox Exporter
-      ↓
-Liora Dev / Staging / Prod
-```
-
-The monitoring stack should be deployed once in the `monitoring` namespace and can observe the Liora application namespaces from there.
+Update the JSON in Git and redeploy instead of saving directly in the provisioned Grafana dashboard.
 
 ---
 
-# 15. Current Status
+## Availability panels show `N/A`
+
+Expected in lab mode.
+
+In Liora mode, verify the namespaces exist:
+
+```bash
+kubectl get ns
+```
+
+Verify the NGINX Services:
+
+```bash
+kubectl get svc -n liora-dev
+kubectl get svc -n liora-staging
+kubectl get svc -n liora-prod
+```
+
+Each namespace must contain:
+
+```text
+nginx-service
+```
+
+---
+
+## Availability panels show `DOWN`
+
+Check the Blackbox ServiceMonitors:
+
+```bash
+kubectl get servicemonitor -n monitoring
+```
+
+Check Blackbox metrics:
+
+```promql
+probe_success
+```
+
+Check the expected NGINX route manually from inside the cluster if necessary.
+
+---
+
+## Custom alerts are missing
+
+Verify:
+
+```bash
+kubectl get prometheusrule -n monitoring liora-alerts
+```
+
+The rule object must contain:
+
+```text
+release=monitoring
+```
+
+Check labels:
+
+```bash
+kubectl get prometheusrule \
+  -n monitoring \
+  liora-alerts \
+  --show-labels
+```
+
+---
+
+# 18. Production handoff notes
+
+The EC2 cluster was used only for development and validation.
+
+The final target is the Proxmox-hosted Kubernetes environment.
+
+Before production use:
+
+```text
+1. Ensure sufficient RAM/storage for Prometheus and Grafana
+2. Deploy Liora namespaces before monitoring in liora mode
+3. Confirm the NGINX Service name is nginx-service
+4. Run ./monitoring/deploy-monitoring.sh liora
+5. Verify all monitoring Pods
+6. Verify nine Liora Blackbox ServiceMonitors
+7. Verify the Liora Overview dashboard
+8. Verify the five custom alert rules
+9. Rotate Grafana credentials
+10. Decide whether Alertmanager notifications should be enabled
+```
+
+The current monitoring setup intentionally avoids hard-coding EC2-specific addresses or credentials, so it can be reused on Proxmox.
+
+---
+
+# Current status
 
 Implemented:
 
@@ -774,10 +955,11 @@ Lab HTTP probe                 DONE
 Dev/Staging/Prod probe config  DONE
 Liora Overview dashboard       DONE
 Prometheus alert rules         DONE
-Monitoring documentation       DONE
+Reproducible deployment script DONE
+Monitoring documentation      DONE
 ```
 
-Still optional / future work:
+Optional / future work:
 
 ```text
 Alertmanager notifications
@@ -785,5 +967,5 @@ Persistent Prometheus storage
 Persistent Grafana storage
 Production credential rotation
 Additional security hardening
-Backup / restore monitoring
+Backup / restore for monitoring data
 ```
