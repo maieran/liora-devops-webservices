@@ -1,0 +1,143 @@
+"""Runtime tests for reverse-proxy application paths."""
+
+from urllib.parse import urlparse
+
+import pytest
+import requests
+
+from tests.support.urls import (
+    join_url,
+    same_origin,
+)
+
+
+pytestmark = pytest.mark.routing
+
+
+APPLICATION_PATHS = [
+    ("wordpress", "/wordpress/"),
+    ("prestashop", "/"),
+]
+
+SUBPATH_APPLICATIONS = [
+    ("wordpress", "/wordpress/"),
+]
+
+@pytest.mark.parametrize(
+    ("application", "public_path"),
+    APPLICATION_PATHS,
+)
+def test_application_final_url_stays_on_same_origin(
+    base_url: str,
+    application: str,
+    public_path: str,
+) -> None:
+    """Application redirects must stay on the public origin."""
+
+    application_url = join_url(
+        base_url,
+        public_path,
+    )
+
+    response = requests.get(
+        application_url,
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    assert same_origin(
+        base_url,
+        response.url,
+    ), (
+        f"{application} redirected outside "
+        f"the expected origin: {response.url}"
+    )
+
+
+@pytest.mark.parametrize(
+    ("application", "public_path"),
+    SUBPATH_APPLICATIONS,
+)
+def test_subpath_application_final_url_stays_under_public_path(
+    base_url: str,
+    application: str,
+    public_path: str,
+) -> None:
+    application_url = join_url(
+        base_url,
+        public_path,
+    )
+
+    response = requests.get(
+        application_url,
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    final_path = urlparse(response.url).path
+
+    assert final_path.startswith(public_path), (
+        f"{application} escaped its public path "
+        f"{public_path}: {response.url}"
+    )
+    
+def test_prestashop_is_reachable_at_root(
+    base_url: str,
+) -> None:
+    """PrestaShop is intentionally exposed at the public root path."""
+
+    response = requests.get(
+        join_url(base_url, "/"),
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    assert same_origin(
+        base_url,
+        response.url,
+    ), (
+        "PrestaShop root redirected outside "
+        f"the expected origin: {response.url}"
+    )
+
+def test_prestashop_alias_redirects_to_trailing_slash(
+    base_url: str,
+) -> None:
+    """The /prestashop alias must redirect to /prestashop/."""
+
+    response = requests.get(
+        join_url(base_url, "/prestashop"),
+        timeout=10,
+        allow_redirects=False,
+    )
+
+    assert response.status_code == 301
+
+    assert response.headers["Location"] == "/prestashop/"
+
+def test_prestashop_alias_is_reachable(
+    base_url: str,
+) -> None:
+    """The optional /prestashop/ alias must still reach PrestaShop."""
+
+    response = requests.get(
+        join_url(base_url, "/prestashop/"),
+        timeout=10,
+        allow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    assert same_origin(
+        base_url,
+        response.url,
+    ), (
+        "PrestaShop alias redirected outside "
+        f"the expected origin: {response.url}"
+    )
