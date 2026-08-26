@@ -3,7 +3,7 @@ resource "proxmox_vm_qemu" "k8s_node" {
   target_node = var.proxmox_node
 
   agent   = 1
-  qemu_os = "other"
+  qemu_os = "l26"
 
   iso = "local:iso/ubuntu-24.04.4-live-server-amd64.iso"
 
