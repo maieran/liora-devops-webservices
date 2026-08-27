@@ -10,11 +10,14 @@ echo "========================================"
 
 echo
 echo "[1/6] Checking monitoring namespace..."
+
 kubectl get namespace "$NAMESPACE" >/dev/null
+
 echo "OK"
 
 echo
 echo "[2/6] Checking monitoring Pods..."
+
 NOT_READY=$(kubectl get pods -n "$NAMESPACE" \
   --no-headers \
   | awk '{
@@ -91,10 +94,7 @@ fi
 
 echo "Blackbox ServiceMonitor exists."
 
-echo "Blackbox ServiceMonitor exists."
-
 echo
 echo "========================================"
 echo " Monitoring validation PASSED"
 echo "========================================"
-
