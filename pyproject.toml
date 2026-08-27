@@ -1,0 +1,30 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = [
+    "tests/unit",
+    "tests/config",
+    "tests/health",
+    "tests/smoke",
+    "tests/assets",
+    "tests/routing",
+    "tests/integration",
+]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+junit_family = "xunit2"
+junit_suite_name = "liora-devops-webservices"
+
+markers = [
+    "unit: Pure Python tests without Docker or network access",
+    "config: Tests for rendered Docker Compose configurations",
+    "health: Basic runtime health endpoint tests",
+    "smoke: Runtime checks for critical application endpoints",
+    "assets: Runtime validation of application CSS, JavaScript and image assets",
+    "routing: Runtime validation of reverse-proxy paths and application subpaths",
+    "integration: Application integration tests",
+    "persistence: Runtime tests verifying data survives service restarts",
+    "resilience: Runtime tests verifying services recover after restarts",
+    "network: Network and DNS isolation tests",
+    "docker: Docker-specific runtime tests",
+    "kubernetes: Kubernetes-specific runtime tests",
+]
