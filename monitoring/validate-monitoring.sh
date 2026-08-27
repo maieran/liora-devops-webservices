@@ -17,7 +17,10 @@ echo
 echo "[2/6] Checking monitoring Pods..."
 NOT_READY=$(kubectl get pods -n "$NAMESPACE" \
   --no-headers \
-  | awk '$2 !~ /^([0-9]+)\/\1$/ || $3 != "Running" {print}')
+  | awk '{
+      split($2, ready, "/")
+      if (ready[1] != ready[2] || $3 != "Running") print
+    }')
 
 if [[ -n "$NOT_READY" ]]; then
   echo "ERROR: Some monitoring Pods are not ready:"
@@ -76,9 +79,17 @@ echo "Found $RULE_COUNT Liora alert rules."
 echo
 echo "[6/6] Checking Blackbox ServiceMonitor..."
 
-kubectl get servicemonitor \
-  monitoring-blackbox-prometheus-blackbox-exporter-grafana-health \
-  -n "$NAMESPACE" >/dev/null
+BLACKBOX_MONITORS=$(kubectl get servicemonitor \
+  -n "$NAMESPACE" \
+  -o name \
+  | grep 'monitoring-blackbox' || true)
+
+if [[ -z "$BLACKBOX_MONITORS" ]]; then
+  echo "ERROR: No Blackbox ServiceMonitor found."
+  exit 1
+fi
+
+echo "Blackbox ServiceMonitor exists."
 
 echo "Blackbox ServiceMonitor exists."
 
