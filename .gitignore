@@ -1,24 +1,12 @@
+# Environment files
 .env
 .env.dev
 .env.prod
 .env.ci
 .env.staging
-.DS_Store
 
-# Terraform
-**/.terraform/*
-*.tfstate
-*.tfstate.*
-*.tfvars
-*.tfplan
-crash.log
-crash.*.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
+# macOS
+.DS_Store
 
 # Python
 .venv/
@@ -28,4 +16,19 @@ __pycache__/
 # Test artifacts
 .pytest_cache/
 reports/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
 tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
