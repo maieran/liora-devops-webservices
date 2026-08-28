@@ -1,0 +1,59 @@
+grafana:
+  enabled: true
+
+  defaultDashboardsEnabled: true
+
+  service:
+    type: ClusterIP
+
+  persistence:
+    enabled: false
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    retention: 1d
+    retentionSize: 1GB
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+    storageSpec: {}
+
+
+alertmanager:
+  enabled: false
+
+
+kubeStateMetrics:
+  enabled: true
+
+
+nodeExporter:
+  enabled: true
+
+
+# K3s does not expose all control-plane metrics
+# in the same way as a standard Kubernetes installation.
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeEtcd:
+  enabled: false

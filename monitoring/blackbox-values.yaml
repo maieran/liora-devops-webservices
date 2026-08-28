@@ -1,0 +1,52 @@
+config:
+  modules:
+    http_2xx:
+      prober: http
+      timeout: 5s
+
+      http:
+        method: GET
+
+        valid_status_codes:
+          - 200
+          - 301
+          - 302
+
+        follow_redirects: true
+        preferred_ip_protocol: ip4
+
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 32Mi
+
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+
+serviceMonitor:
+  enabled: true
+
+  selfMonitor:
+    enabled: false
+
+  defaults:
+    labels:
+      release: monitoring
+
+    interval: 30s
+    scrapeTimeout: 10s
+    module: http_2xx
+    
+  # Temporary lab target used to validate Blackbox Exporter
+  # on the EC2 monitoring development environment.
+  targets:
+    - name: grafana-health
+      url: http://monitoring-grafana.monitoring.svc.cluster.local/api/health
+
+      additionalMetricsRelabels:
+        environment: lab
+        application: grafana
+        probe_type: http

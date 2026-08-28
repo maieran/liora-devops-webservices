@@ -1,0 +1,114 @@
+config:
+  modules:
+    http_2xx:
+      prober: http
+      timeout: 5s
+
+      http:
+        method: GET
+
+        valid_status_codes:
+          - 200
+          - 301
+          - 302
+
+        follow_redirects: true
+        preferred_ip_protocol: ip4
+
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 32Mi
+
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+
+serviceMonitor:
+  enabled: true
+
+  selfMonitor:
+    enabled: false
+
+  defaults:
+    labels:
+      release: monitoring
+
+    interval: 30s
+    scrapeTimeout: 10s
+    module: http_2xx
+
+  targets:
+
+    # DEV
+
+    - name: dev-nginx
+      url: http://nginx-service.liora-dev.svc.cluster.local/health
+      additionalMetricsRelabels:
+        environment: dev
+        liora_namespace: liora-dev
+        application: nginx
+
+    - name: dev-prestashop
+      url: http://nginx-service.liora-dev.svc.cluster.local/
+      additionalMetricsRelabels:
+        environment: dev
+        liora_namespace: liora-dev
+        application: prestashop
+
+    - name: dev-wordpress
+      url: http://nginx-service.liora-dev.svc.cluster.local/wordpress/
+      additionalMetricsRelabels:
+        environment: dev
+        liora_namespace: liora-dev
+        application: wordpress
+
+
+    # STAGING
+
+    - name: staging-nginx
+      url: http://nginx-service.liora-staging.svc.cluster.local/health
+      additionalMetricsRelabels:
+        environment: staging
+        liora_namespace: liora-staging
+        application: nginx
+
+    - name: staging-prestashop
+      url: http://nginx-service.liora-staging.svc.cluster.local/
+      additionalMetricsRelabels:
+        environment: staging
+        liora_namespace: liora-staging
+        application: prestashop
+
+    - name: staging-wordpress
+      url: http://nginx-service.liora-staging.svc.cluster.local/wordpress/
+      additionalMetricsRelabels:
+        environment: staging
+        liora_namespace: liora-staging
+        application: wordpress
+
+
+    # PROD
+
+    - name: prod-nginx
+      url: http://nginx-service.liora-prod.svc.cluster.local/health
+      additionalMetricsRelabels:
+        environment: prod
+        liora_namespace: liora-prod
+        application: nginx
+
+    - name: prod-prestashop
+      url: http://nginx-service.liora-prod.svc.cluster.local/
+      additionalMetricsRelabels:
+        environment: prod
+        liora_namespace: liora-prod
+        application: prestashop
+
+    - name: prod-wordpress
+      url: http://nginx-service.liora-prod.svc.cluster.local/wordpress/
+      additionalMetricsRelabels:
+        environment: prod
+        liora_namespace: liora-prod
+        application: wordpress
