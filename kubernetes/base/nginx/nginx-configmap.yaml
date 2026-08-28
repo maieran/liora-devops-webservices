@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: nginx-configmap
+  namespace: liora-dev
+
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+
+        absolute_redirect off;
+
+        location = /health {
+            access_log off;
+            default_type text/plain;
+            return 200 "ok\n";
+        }
+
+        # WordPress canonical subpath
+        location = /wordpress {
+            return 301 /wordpress/;
+        }
+
+        location /wordpress/ {
+            # Trailing slash removes /wordpress/
+            # before forwarding to Apache/WordPress.
+            proxy_pass http://wordpress-app-service/;
+            proxy_http_version 1.1;
+
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # Current external NodePort.
+            # Later this should become a Helm value.
+            proxy_set_header X-Forwarded-Port 30080;
+
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # Redirect direct WordPress admin access
+        # into the public /wordpress path.
+        location /wp-admin/ {
+            return 301 /wordpress$request_uri;
+        }
+
+        location = /wp-login.php {
+            return 301 /wordpress/wp-login.php$is_args$args;
+        }
+
+        # Optional PrestaShop alias.
+        # PrestaShop remains canonically served from /.
+        location = /prestashop {
+            return 301 /prestashop/;
+        }
+
+        location /prestashop/ {
+            # Trailing slash removes /prestashop/
+            # before forwarding.
+            proxy_pass http://prestashop-app-service/;
+            proxy_http_version 1.1;
+
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Port 30080;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # PrestaShop is canonically served at root.
+        #
+        # PrestaShop generates root-relative URLs such as:
+        # /themes/...
+        # /modules/...
+        # /img/...
+        # /6-accessories
+        location / {
+            proxy_pass http://prestashop-app-service;
+            proxy_http_version 1.1;
+
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Port 30080;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }

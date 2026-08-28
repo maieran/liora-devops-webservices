@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: prestashop-app-service
+  namespace: liora-dev
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: prestashop-app
+
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

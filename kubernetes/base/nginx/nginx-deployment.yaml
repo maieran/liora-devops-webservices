@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: nginx-deployment
+  namespace: liora-dev
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: nginx-deployment
+
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment
+
+    spec:
+      initContainers:
+        - name: wait-for-applications
+          image: curlimages/curl:8.10.1
+
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for WordPress HTTP endpoint..."
+
+              until curl -fsS \
+                --connect-timeout 3 \
+                --max-time 5 \
+                -o /dev/null \
+                http://wordpress-app-service/; do
+                echo "wordpress-app-service is not ready over HTTP yet..."
+                sleep 2
+              done
+
+              echo "WordPress is reachable over HTTP."
+
+              echo "Waiting for PrestaShop HTTP endpoint..."
+
+              until curl -fsS \
+                --connect-timeout 3 \
+                --max-time 5 \
+                -o /dev/null \
+                http://prestashop-app-service/; do
+                echo "prestashop-app-service is not ready over HTTP yet..."
+                sleep 2
+              done
+
+              echo "PrestaShop is reachable over HTTP."
+
+      containers:
+        - name: nginx-deployment
+          image: andrem43/nginx-kubernetes:base
+
+          ports:
+            - name: http
+              containerPort: 80
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          volumeMounts:
+            - name: nginx-configmap
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+
+      volumes:
+        - name: nginx-configmap
+          configMap:
+            name: nginx-configmap
