@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: prestashop-app-service
+
+spec:
+  type: {{ .Values.prestashop.service.type }}
+
+  selector:
+    app: prestashop-app
+
+  ports:
+    - name: http
+      port: {{ .Values.prestashop.service.port }}
+      targetPort: http
+      protocol: TCP

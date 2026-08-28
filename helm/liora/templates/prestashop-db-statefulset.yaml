@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: prestashop-db
+
+spec:
+  serviceName: prestashop-db-service-headless
+  replicas: {{ .Values.prestashopDatabase.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: prestashop-db
+
+  template:
+    metadata:
+      labels:
+        app: prestashop-db
+
+    spec:
+      containers:
+        - name: mysql
+
+          image: "{{ .Values.prestashopDatabase.image.repository }}:{{ .Values.prestashopDatabase.image.tag }}"
+          imagePullPolicy: {{ .Values.prestashopDatabase.image.pullPolicy }}
+
+          ports:
+            - name: mysql
+              containerPort: {{ .Values.prestashopDatabase.service.port }}
+
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_NAME
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_USER
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_PASSWORD
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_ROOT_PASSWORD
+
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"
+
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 10
+
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD"
+
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
+
+          volumeMounts:
+            - name: prestashop-db-data
+              mountPath: /var/lib/mysql
+
+  volumeClaimTemplates:
+    - metadata:
+        name: prestashop-db-data
+
+      spec:
+        accessModes:
+          - {{ .Values.prestashopDatabase.storage.accessMode | quote }}
+
+        resources:
+          requests:
+            storage: {{ .Values.prestashopDatabase.storage.size | quote }}

@@ -1,0 +1,12 @@
+environment: dev
+
+nginx:
+  service:
+    type: NodePort
+    nodePort: 30080
+
+wordpress:
+  debug: true
+
+prestashop:
+  devMode: true

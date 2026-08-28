@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: prestashop-app
+
+spec:
+  replicas: {{ .Values.prestashop.replicaCount }}
+
+  selector:
+    matchLabels:
+      app: prestashop-app
+
+  template:
+    metadata:
+      labels:
+        app: prestashop-app
+
+    spec:
+      initContainers:
+        - name: wait-for-prestashop-db
+          image: busybox:1.36
+
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PrestaShop database..."
+
+              until nc -z prestashop-db-service-headless 3306; do
+                echo "prestashop-db is not ready yet..."
+                sleep 2
+              done
+
+              echo "prestashop-db is reachable."
+
+      containers:
+        - name: prestashop-app
+
+          image: "{{ .Values.prestashop.image.repository }}:{{ .Values.prestashop.image.tag }}"
+          imagePullPolicy: {{ .Values.prestashop.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.prestashop.service.port }}
+
+          env:
+            - name: DB_SERVER
+              value: prestashop-db-service-headless
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_NAME
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_USER
+
+            - name: DB_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.existingSecret }}
+                  key: PRESTASHOP_DB_PASSWORD
+
+            - name: PS_INSTALL_AUTO
+              value: {{ (ternary "1" "0" .Values.prestashop.installAuto) | quote }}
+
+            - name: PS_DEV_MODE
+              value: {{ (ternary "1" "0" .Values.prestashop.devMode) | quote }}
+
+            - name: PUBLIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: prestashop-configmap
+                  key: PUBLIC_HOST
+
+            - name: NGINX_NODE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: prestashop-configmap
+                  key: NGINX_NODE_PORT
+
+            - name: PS_DOMAIN
+              value: "$(PUBLIC_HOST):$(NGINX_NODE_PORT)"
+
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: {{ .Values.prestashop.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.prestashop.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.prestashop.startupProbe.failureThreshold }}
+
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5

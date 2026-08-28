@@ -1,0 +1,21 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: allow-nginx-ingress
+
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx-deployment
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 80
+{{- end }}
+

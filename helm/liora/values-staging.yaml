@@ -1,0 +1,12 @@
+environment: staging
+
+nginx:
+  service:
+    type: NodePort
+    nodePort: 30081
+
+wordpress:
+  debug: false
+
+prestashop:
+  devMode: false
