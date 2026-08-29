@@ -60,6 +60,39 @@ pipeline {
 
                     docker --version
                     docker compose version
+                    helm version --short
+                    kubectl version --client
+                    kubectl cluster-info
+                '''
+            }
+        }
+
+                /*
+         * Validates the Helm chart for all environments
+         * before any deployment is started.
+         */
+        stage('Validate Helm Charts') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    for ENV in dev staging prod; do
+                        echo "===== Validating Helm: ${ENV} ====="
+
+                        helm lint \
+                            ./helm/liora \
+                            -f "helm/liora/values-${ENV}.yaml" \
+                            --set "prestashop.publicHost=${ENV}.example.test"
+
+                        helm template "liora-${ENV}" \
+                            ./helm/liora \
+                            --namespace "liora-${ENV}" \
+                            -f "helm/liora/values-${ENV}.yaml" \
+                            --set "prestashop.publicHost=${ENV}.example.test" \
+                            > /dev/null
+                    done
+
+                    echo "All Helm charts validated successfully."
                 '''
             }
         }
@@ -440,6 +473,77 @@ pipeline {
                 }
             }
         }
+
+        /*
+         * Deploys the current release image to Kubernetes Dev via Helm.
+         */
+        stage('Deploy Kubernetes Dev') {
+            when {
+                branch 'main'
+            }
+
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    K8S_HOST="10.10.10.11"
+
+                    echo "Deploying ${IMAGE_TAG} to Kubernetes Dev."
+
+                    helm upgrade --install liora-dev \
+                        ./helm/liora \
+                        --namespace liora-dev \
+                        -f helm/liora/values-dev.yaml \
+                        --set "prestashop.publicHost=${K8S_HOST}" \
+                        --set "nginx.image.repository=${DOCKERHUB_USERNAME}/liora-nginx" \
+                        --set "nginx.image.tag=${IMAGE_TAG}" \
+                        --set "wordpress.image.repository=${DOCKERHUB_USERNAME}/liora-wordpress" \
+                        --set "wordpress.image.tag=${IMAGE_TAG}" \
+                        --set "prestashop.image.repository=${DOCKERHUB_USERNAME}/liora-prestashop" \
+                        --set "prestashop.image.tag=${IMAGE_TAG}" \
+                        --set networkPolicy.enabled=true \
+                        --wait \
+                        --timeout 6m
+
+                    kubectl rollout status deployment/nginx-deployment \
+                        -n liora-dev \
+                        --timeout=6m
+
+                    kubectl rollout status deployment/wordpress-app \
+                        -n liora-dev \
+                        --timeout=6m
+
+                    kubectl rollout status deployment/prestashop-app \
+                        -n liora-dev \
+                        --timeout=6m
+
+                    echo "Kubernetes Dev deployment completed."
+                '''
+            }
+        }
+
+        /*
+         * Validates the Kubernetes Dev deployment through the public Nginx endpoint.
+         */
+        stage('Test Kubernetes Dev') {
+            when {
+                branch 'main'
+            }
+
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    BASE_URL="http://10.10.10.11:30080"
+
+                    echo "Testing Kubernetes Dev: ${BASE_URL}"
+
+                    BASE_URL="$BASE_URL" \
+                        ./tests/run-python-tests.sh runtime
+                '''
+            }
+        }
+
 
         /*
          * Staging is deployed only from main.
