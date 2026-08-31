@@ -534,16 +534,33 @@ pipeline {
                 sh '''#!/usr/bin/env bash
                     set -euo pipefail
 
-                    BASE_URL="http://10.10.10.11:30080"
+                    chmod +x tests/kubernetes/validate-deployment.sh
 
-                    echo "Testing Kubernetes Dev: ${BASE_URL}"
-
-                    BASE_URL="$BASE_URL" \
-                        ./tests/run-python-tests.sh runtime
+                    ./tests/kubernetes/validate-deployment.sh \
+                        liora-dev \
+                        http://10.10.10.11:30080
                 '''
             }
         }
 
+                /*
+         * Validates the monitoring stack after the Kubernetes Dev deployment.
+         */
+        stage('Validate Monitoring') {
+            when {
+                branch 'main'
+            }
+
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    chmod +x monitoring/validate-monitoring.sh
+
+                    bash monitoring/validate-monitoring.sh
+                '''
+            }
+        }
 
         /*
          * Staging is deployed only from main.
