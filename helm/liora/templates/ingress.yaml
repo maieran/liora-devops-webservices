@@ -1,0 +1,26 @@
+{{- if .Values.nginx.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: liora-ingress
+
+spec:
+  ingressClassName: {{ .Values.nginx.ingress.className }}
+
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service
+                port:
+                  number: {{ .Values.nginx.service.port }}
+
+  {{- if .Values.nginx.ingress.tls.enabled }}
+  tls:
+    - secretName: {{ .Values.nginx.ingress.tls.secretName }}
+  {{- end }}
+{{- end }}
