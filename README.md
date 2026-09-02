@@ -256,3 +256,11 @@ liora-devops-webservices/
 ├── Jenkinsfile
 ├── deploy.sh
 └── README.md
+
+## HTTPS / TLS
+
+The Kubernetes development environment supports HTTPS through the Traefik
+Ingress Controller with TLS termination on port 443.
+
+For setup, deployment and local browser testing instructions, see
+[HTTPS and TLS](docs/https.md).
