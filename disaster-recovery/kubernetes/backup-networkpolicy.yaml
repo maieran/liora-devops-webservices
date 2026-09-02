@@ -1,0 +1,94 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: allow-backup-to-databases
+
+spec:
+  podSelector:
+    matchLabels:
+      app: liora-db-backup
+
+  policyTypes:
+    - Egress
+
+  egress:
+    # WordPress MySQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: wordpress-db
+      ports:
+        - protocol: TCP
+          port: 3306
+
+    # PrestaShop MySQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: prestashop-db
+      ports:
+        - protocol: TCP
+          port: 3306
+
+    # Kubernetes DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: allow-backup-to-wordpress-db
+
+spec:
+  podSelector:
+    matchLabels:
+      app: wordpress-db
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: liora-db-backup
+
+      ports:
+        - protocol: TCP
+          port: 3306
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+metadata:
+  name: allow-backup-to-prestashop-db
+
+spec:
+  podSelector:
+    matchLabels:
+      app: prestashop-db
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: liora-db-backup
+
+      ports:
+        - protocol: TCP
+          port: 3306
