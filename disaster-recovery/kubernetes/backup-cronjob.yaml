@@ -1,0 +1,131 @@
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: liora-db-backup
+
+spec:
+  # Every day at 02:00
+  schedule: "0 2 * * *"
+
+  concurrencyPolicy: Forbid
+
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+
+      template:
+        metadata:
+          labels:
+            app: liora-db-backup
+
+        spec:
+          restartPolicy: Never
+
+          containers:
+            - name: mysql-backup
+              image: mysql:8.0.42
+
+              env:
+                # WordPress
+                - name: WORDPRESS_DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: liora-db-secrets
+                      key: WORDPRESS_DB_NAME
+
+                - name: WORDPRESS_DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: liora-db-secrets
+                      key: WORDPRESS_DB_USER
+
+                - name: WORDPRESS_DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: liora-db-secrets
+                      key: WORDPRESS_DB_PASSWORD
+
+                # PrestaShop
+                - name: PRESTASHOP_DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: liora-db-secrets
+                      key: PRESTASHOP_DB_NAME
+
+                - name: PRESTASHOP_DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: liora-db-secrets
+                      key: PRESTASHOP_DB_USER
+
+                - name: PRESTASHOP_DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: liora-db-secrets
+                      key: PRESTASHOP_DB_PASSWORD
+
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+
+                  TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+                  BACKUP_DIR="/backups/${TIMESTAMP}"
+
+                  mkdir -p "$BACKUP_DIR"
+
+                  echo "Starting WordPress database backup..."
+
+                  mysqldump \
+                    --single-transaction \
+                    --quick \
+                    --no-tablespaces \
+                    -h wordpress-db-service-headless \
+                    -u "$WORDPRESS_DB_USER" \
+                    -p"$WORDPRESS_DB_PASSWORD" \
+                    "$WORDPRESS_DB_NAME" \
+                  | gzip > "${BACKUP_DIR}/wordpress.sql.gz"
+
+                  echo "WordPress database backup completed."
+
+                  echo "Starting PrestaShop database backup..."
+
+                  mysqldump \
+                    --single-transaction \
+                    --quick \
+                    --no-tablespaces \
+                    -h prestashop-db-service-headless \
+                    -u "$PRESTASHOP_DB_USER" \
+                    -p"$PRESTASHOP_DB_PASSWORD" \
+                    "$PRESTASHOP_DB_NAME" \
+                  | gzip > "${BACKUP_DIR}/prestashop.sql.gz"
+
+                  echo "PrestaShop database backup completed."
+
+                  echo "Removing backups older than 7 days..."
+
+                  find /backups \
+                    -mindepth 1 \
+                    -maxdepth 1 \
+                    -type d \
+                    -mtime +7 \
+                    -exec rm -rf {} +
+
+                  echo
+                  echo "Backup created:"
+                  ls -lh "$BACKUP_DIR"
+
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: liora-db-backups
+
