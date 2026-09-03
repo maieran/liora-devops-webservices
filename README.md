@@ -245,9 +245,32 @@ liora-devops-webservices/
 │   ├── wordpress/
 │   └── prestashop/
 │
+├── helm/
+│   └── liora/
+│       ├── templates/
+│       ├── values.yaml
+│       ├── values-dev.yaml
+│       ├── values-staging.yaml
+│       └── values-prod.yaml
+│
+├── kubernetes/
+│
+├── monitoring/
+│
 ├── tests/
 │   ├── health/
-│   └── smoke/
+│   ├── integration/
+│   ├── kubernetes/
+│   ├── network/
+│   ├── routing/
+│   ├── smoke/
+│   ├── support/
+│   └── unit/
+│
+├── docs/
+│   └── security.md
+│
+├── terraform/
 │
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
@@ -256,3 +279,16 @@ liora-devops-webservices/
 ├── Jenkinsfile
 ├── deploy.sh
 └── README.md
+
+## Security Scanning
+
+Docker images are automatically scanned for HIGH and CRITICAL vulnerabilities
+with Trivy as part of the Jenkins CI pipeline.
+
+The pipeline currently uses a report-only security policy. Fixable
+OS-level vulnerabilities are remediated where possible, while remaining
+application-level findings are documented and evaluated before dependency
+upgrades.
+
+For details about vulnerability remediation and known security findings, see
+[Security and Vulnerability Management](docs/security.md).
