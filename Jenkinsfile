@@ -395,6 +395,14 @@ pipeline {
                     echo "Trivy Security Scan"
                     echo "Scanning HIGH and CRITICAL vulnerabilities"
 
+                    if ! command -v trivy >/dev/null 2>&1; then
+                        echo "ERROR: Trivy is not installed on this Jenkins agent."
+                        echo "Please install Trivy before running the vulnerability scan."
+                        exit 1
+                    fi
+
+                    trivy --version
+
                     echo "Scanning Nginx..."
                     trivy image \
                         --severity HIGH,CRITICAL \
