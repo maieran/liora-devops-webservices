@@ -126,11 +126,19 @@ curl -fsS "$BASE_URL/health" > /dev/null
 echo "/health -> OK"
 
 echo "Testing / ..."
-curl -fsSL --max-redirs 10 "$BASE_URL/" > /dev/null
+curl -fsSL \
+  --connect-timeout 5 \
+  --max-time 30 \
+  --max-redirs 10 \
+  "$BASE_URL/" > /dev/null
 echo "/ -> OK"
 
 echo "Testing /wordpress/ ..."
-curl -fsSL --max-redirs 10 "$BASE_URL/wordpress/" > /dev/null
+curl -fsSL \
+  --connect-timeout 5 \
+  --max-time 30 \
+  --max-redirs 10 \
+  "$BASE_URL/wordpress/" > /dev/null
 echo "/wordpress/ -> OK"
 
 echo
