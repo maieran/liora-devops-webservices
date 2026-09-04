@@ -385,6 +385,49 @@ pipeline {
             }
         }
 
+         /*
+         * Scan locally built application images for known vulnerabilities.
+         * This stage is report only and does not fail the pipeline.
+         */
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    echo "Trivy Security Scan"
+                    echo "Scanning HIGH and CRITICAL vulnerabilities"
+
+                    if ! command -v trivy >/dev/null 2>&1; then
+                        echo "ERROR: Trivy is not installed on this Jenkins agent."
+                        echo "Please install Trivy before running the vulnerability scan."
+                        exit 1
+                    fi
+
+                    trivy --version
+
+                    echo "Scanning Nginx..."
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        "${DOCKERHUB_USERNAME}/liora-nginx:${IMAGE_TAG}"
+
+                    echo "Scanning WordPress..."
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        "${DOCKERHUB_USERNAME}/liora-wordpress:${IMAGE_TAG}"
+
+                    echo "Scanning PrestaShop..."
+                    trivy image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        "${DOCKERHUB_USERNAME}/liora-prestashop:${IMAGE_TAG}"
+
+                    echo "Trivy Security Scan completed"
+                '''
+            }
+        }
+
         /*
          * Release images are published only from main.
          */
