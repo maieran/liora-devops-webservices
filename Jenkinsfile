@@ -2,6 +2,8 @@ pipeline {
     agent any
 
     environment {
+        K8S_HOST = '10.10.10.11'
+
         DOCKERHUB_USERNAME = 'shabbyalaei'
 
         DEV_PROJECT = 'liora-dev'
@@ -529,8 +531,6 @@ pipeline {
                 sh '''#!/usr/bin/env bash
                     set -euo pipefail
 
-                    K8S_HOST="10.10.10.11"
-
                     echo "Deploying ${IMAGE_TAG} to Kubernetes Dev."
 
                     helm upgrade --install liora-dev \
@@ -581,12 +581,30 @@ pipeline {
 
                     ./tests/kubernetes/validate-deployment.sh \
                         liora-dev \
-                        http://10.10.10.11:30080
+                        http://${K8S_HOST}:30080
                 '''
             }
         }
 
-                /*
+        /*
+        * Deploys the monitoring stack after the Kubernetes Dev deployment.
+        */
+        stage('Deploy Monitoring') {
+            when {
+                branch 'main'
+            }
+
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    chmod +x monitoring/deploy-monitoring.sh
+                    bash monitoring/deploy-monitoring.sh liora
+                '''
+            }
+        }
+
+        /*
          * Validates the monitoring stack after the Kubernetes Dev deployment.
          */
         stage('Validate Monitoring') {
