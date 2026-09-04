@@ -84,8 +84,15 @@ spec:
                   name: prestashop-configmap
                   key: NGINX_NODE_PORT
 
+            - name: PS_ENABLE_SSL
+              value: {{ (ternary "1" "0" .Values.nginx.ingress.tls.enabled) | quote }}
+
             - name: PS_DOMAIN
+              {{- if and .Values.nginx.ingress.enabled .Values.nginx.ingress.tls.enabled }}
+              value: "$(PUBLIC_HOST)"
+              {{- else }}
               value: "$(PUBLIC_HOST):$(NGINX_NODE_PORT)"
+              {{- end }}
 
           startupProbe:
             tcpSocket:

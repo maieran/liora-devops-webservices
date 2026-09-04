@@ -16,6 +16,13 @@ nginx:
     port: 80
     nodePort: 30080
 
+  ingress:
+    enabled: false
+    className: traefik
+    tls:
+      enabled: false
+      secretName: liora-tls
+
 prestashop:
   replicaCount: 1
 
