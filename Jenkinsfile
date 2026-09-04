@@ -543,7 +543,25 @@ pipeline {
             }
         }
 
-                /*
+        /*
+        * Deploys the monitoring stack after the Kubernetes Dev deployment.
+        */
+        stage('Deploy Monitoring') {
+            when {
+                branch 'main'
+            }
+
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    chmod +x monitoring/deploy-monitoring.sh
+                    bash monitoring/deploy-monitoring.sh liora
+                '''
+            }
+        }
+
+        /*
          * Validates the monitoring stack after the Kubernetes Dev deployment.
          */
         stage('Validate Monitoring') {
