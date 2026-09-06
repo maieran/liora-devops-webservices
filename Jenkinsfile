@@ -623,9 +623,9 @@ pipeline {
             }
         }
 
-        /*
-         * Staging is deployed only from main.
-         */
+       /*
+        * Staging is deployed to Kubernetes via Helm only from main.
+        */
         stage('Staging Environment') {
             when {
                 branch 'main'
@@ -633,98 +633,56 @@ pipeline {
 
             stages {
 
-                stage('Deploy Staging') {
-                    steps {
-                        withCredentials([
-                            string(
-                                credentialsId: 'liora-wp-db-password',
-                                variable: 'WORDPRESS_DB_PASSWORD'
-                            ),
-                            string(
-                                credentialsId: 'liora-wp-db-root-password',
-                                variable: 'WORDPRESS_DB_ROOT_PASSWORD'
-                            ),
-                            string(
-                                credentialsId: 'liora-presta-db-password',
-                                variable: 'PRESTASHOP_DB_PASSWORD'
-                            ),
-                            string(
-                                credentialsId: 'liora-presta-db-root-password',
-                                variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
-                            )
-                        ]) {
-                            sh '''#!/usr/bin/env bash
-                                set -euo pipefail
-
-                                ENV_FILE="$(mktemp)"
-                                chmod 600 "$ENV_FILE"
-
-                                trap 'rm -f "$ENV_FILE"' EXIT
-
-                                printf '%s\\n' \
-                                    "WORDPRESS_DB_NAME=wordpress" \
-                                    "WORDPRESS_DB_USER=wordpress" \
-                                    "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
-                                    "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
-                                    "" \
-                                    "PRESTASHOP_DB_NAME=prestashop" \
-                                    "PRESTASHOP_DB_USER=prestashop" \
-                                    "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
-                                    "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
-                                    "" \
-                                    "APP_PORT=${STAGING_PORT}" \
-                                    "SERVER_HOST=${RUNTIME_HOST}:${STAGING_PORT}" \
-                                    > "$ENV_FILE"
-
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    config --quiet
-
-                                echo "Deploying ${IMAGE_TAG} to Staging."
-                                echo "Staging endpoint: http://${RUNTIME_HOST}:${STAGING_PORT}"
-
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    pull nginx wordpress prestashop
-
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    up -d \
-                                    --no-build \
-                                    --remove-orphans \
-                                    --wait \
-                                    --wait-timeout 300
-
-                                docker compose \
-                                    -p "$STAGING_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.staging.yml \
-                                    ps
-                            '''
-                        }
-                    }
-                }
-
-                stage('Test Staging') {
+                stage('Deploy Kubernetes Staging') {
                     steps {
                         sh '''#!/usr/bin/env bash
                             set -euo pipefail
 
-                            BASE_URL="http://${RUNTIME_HOST}:${STAGING_PORT}"
+                            echo "Deploying ${IMAGE_TAG} to Kubernetes Staging."
 
-                            echo "Testing Staging: ${BASE_URL}"
+                            helm upgrade --install liora-staging \
+                                ./helm/liora \
+                                --namespace liora-staging \
+                                --create-namespace \
+                                -f helm/liora/values-staging.yaml \
+                                --set "prestashop.publicHost=${K8S_HOST}" \
+                                --set "nginx.image.repository=${DOCKERHUB_USERNAME}/liora-nginx" \
+                                --set "nginx.image.tag=${IMAGE_TAG}" \
+                                --set "wordpress.image.repository=${DOCKERHUB_USERNAME}/liora-wordpress" \
+                                --set "wordpress.image.tag=${IMAGE_TAG}" \
+                                --set "prestashop.image.repository=${DOCKERHUB_USERNAME}/liora-prestashop" \
+                                --set "prestashop.image.tag=${IMAGE_TAG}" \
+                                --set networkPolicy.enabled=true \
+                                --wait \
+                                --timeout 6m
 
-                            BASE_URL="$BASE_URL" ./tests/run-tests.sh
+                            kubectl rollout status deployment/nginx-deployment \
+                                -n liora-staging \
+                                --timeout=6m
+
+                            kubectl rollout status deployment/wordpress-app \
+                                -n liora-staging \
+                                --timeout=6m
+
+                            kubectl rollout status deployment/prestashop-app \
+                                -n liora-staging \
+                                --timeout=6m
+
+                            echo "Kubernetes Staging deployment completed."
+                        '''
+                    }
+                }
+
+                stage('Test Kubernetes Staging') {
+                    steps {
+                        sh '''#!/usr/bin/env bash
+                            set -euo pipefail
+
+                            chmod +x tests/kubernetes/validate-deployment.sh
+
+                            ./tests/kubernetes/validate-deployment.sh \
+                                liora-staging \
+                                http://${K8S_HOST}:30081
                         '''
                     }
                 }
@@ -757,9 +715,10 @@ pipeline {
             }
         }
 
-        /*
-         * Production deployment and tests.
-         */
+       /*
+        * Production is deployed to Kubernetes via Helm
+        * after manual approval.
+        */
         stage('Production Environment') {
             when {
                 branch 'main'
@@ -767,98 +726,56 @@ pipeline {
 
             stages {
 
-                stage('Deploy Production') {
-                    steps {
-                        withCredentials([
-                            string(
-                                credentialsId: 'liora-wp-db-password',
-                                variable: 'WORDPRESS_DB_PASSWORD'
-                            ),
-                            string(
-                                credentialsId: 'liora-wp-db-root-password',
-                                variable: 'WORDPRESS_DB_ROOT_PASSWORD'
-                            ),
-                            string(
-                                credentialsId: 'liora-presta-db-password',
-                                variable: 'PRESTASHOP_DB_PASSWORD'
-                            ),
-                            string(
-                                credentialsId: 'liora-presta-db-root-password',
-                                variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
-                            )
-                        ]) {
-                            sh '''#!/usr/bin/env bash
-                                set -euo pipefail
-
-                                ENV_FILE="$(mktemp)"
-                                chmod 600 "$ENV_FILE"
-
-                                trap 'rm -f "$ENV_FILE"' EXIT
-
-                                printf '%s\\n' \
-                                    "WORDPRESS_DB_NAME=wordpress" \
-                                    "WORDPRESS_DB_USER=wordpress" \
-                                    "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
-                                    "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
-                                    "" \
-                                    "PRESTASHOP_DB_NAME=prestashop" \
-                                    "PRESTASHOP_DB_USER=prestashop" \
-                                    "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
-                                    "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
-                                    "" \
-                                    "APP_PORT=${PROD_PORT}" \
-                                    "SERVER_HOST=${RUNTIME_HOST}:${PROD_PORT}" \
-                                    > "$ENV_FILE"
-
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    config --quiet
-
-                                echo "Deploying ${IMAGE_TAG} to Production."
-                                echo "Production endpoint: http://${RUNTIME_HOST}:${PROD_PORT}"
-
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    pull nginx wordpress prestashop
-
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    up -d \
-                                    --no-build \
-                                    --remove-orphans \
-                                    --wait \
-                                    --wait-timeout 300
-
-                                docker compose \
-                                    -p "$PROD_PROJECT" \
-                                    --env-file "$ENV_FILE" \
-                                    -f docker-compose.yml \
-                                    -f docker-compose.prod.yml \
-                                    ps
-                            '''
-                        }
-                    }
-                }
-
-                stage('Test Production') {
+                stage('Deploy Kubernetes Production') {
                     steps {
                         sh '''#!/usr/bin/env bash
                             set -euo pipefail
 
-                            BASE_URL="http://${RUNTIME_HOST}:${PROD_PORT}"
+                            echo "Deploying ${IMAGE_TAG} to Kubernetes Production."
 
-                            echo "Testing Production: ${BASE_URL}"
+                            helm upgrade --install liora-prod \
+                                ./helm/liora \
+                                --namespace liora-prod \
+                                --create-namespace \
+                                -f helm/liora/values-prod.yaml \
+                                --set "prestashop.publicHost=${K8S_HOST}" \
+                                --set "nginx.image.repository=${DOCKERHUB_USERNAME}/liora-nginx" \
+                                --set "nginx.image.tag=${IMAGE_TAG}" \
+                                --set "wordpress.image.repository=${DOCKERHUB_USERNAME}/liora-wordpress" \
+                                --set "wordpress.image.tag=${IMAGE_TAG}" \
+                                --set "prestashop.image.repository=${DOCKERHUB_USERNAME}/liora-prestashop" \
+                                --set "prestashop.image.tag=${IMAGE_TAG}" \
+                                --set networkPolicy.enabled=true \
+                                --wait \
+                                --timeout 6m
 
-                            BASE_URL="$BASE_URL" ./tests/run-tests.sh
+                            kubectl rollout status deployment/nginx-deployment \
+                                -n liora-prod \
+                                --timeout=6m
+
+                            kubectl rollout status deployment/wordpress-app \
+                                -n liora-prod \
+                                --timeout=6m
+
+                            kubectl rollout status deployment/prestashop-app \
+                                -n liora-prod \
+                                --timeout=6m
+
+                            echo "Kubernetes Production deployment completed."
+                        '''
+                    }
+                }
+
+                stage('Test Kubernetes Production') {
+                    steps {
+                        sh '''#!/usr/bin/env bash
+                            set -euo pipefail
+
+                            chmod +x tests/kubernetes/validate-deployment.sh
+
+                            ./tests/kubernetes/validate-deployment.sh \
+                                liora-prod \
+                                http://${K8S_HOST}:30082
                         '''
                     }
                 }
