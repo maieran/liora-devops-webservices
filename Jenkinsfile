@@ -69,7 +69,47 @@ pipeline {
             }
         }
 
-                /*
+        /*
+         * Prepare the python venv for python tests.
+         * It upgrades and installs pip and the corresponding requirements.
+         */
+        stage('Prepare Python Tests') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    rm -rf .venv reports
+                    mkdir -p reports
+
+                    python3 -m venv .venv
+                    source .venv/bin/activate
+
+                    python -m pip install --upgrade pip
+                    python -m pip install -r tests/requirements-test.txt
+
+                    python -m pytest --version
+
+                    chmod +x tests/run-python-tests.sh
+                '''
+            }
+        }
+
+        /*
+         * Activates the python environments and executes the first static tests.
+         *
+         */
+        stage('Python Static Tests') {
+            steps {
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
+
+                    source .venv/bin/activate
+
+                    ./tests/run-python-tests.sh static
+                '''
+            }
+        }
+        /*
          * Validates the Helm chart for all environments
          * before any deployment is started.
          */
@@ -367,19 +407,63 @@ pipeline {
 
                 stage('Run Dev Tests') {
                     steps {
-                        sh '''#!/usr/bin/env bash
-                            set -euo pipefail
+                        withCredentials([
+                            string(
+                                credentialsId: 'liora-wp-db-password',
+                                variable: 'WORDPRESS_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-wp-db-root-password',
+                                variable: 'WORDPRESS_DB_ROOT_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-password',
+                                variable: 'PRESTASHOP_DB_PASSWORD'
+                            ),
+                            string(
+                                credentialsId: 'liora-presta-db-root-password',
+                                variable: 'PRESTASHOP_DB_ROOT_PASSWORD'
+                            )
+                        ]) {
+                            sh '''#!/usr/bin/env bash
+                                set -euo pipefail
 
-                            chmod +x tests/run-tests.sh
-                            chmod +x tests/health/health-check.sh
-                            chmod +x tests/smoke/smoke-test.sh
+                                source .venv/bin/activate
 
-                            BASE_URL="http://${RUNTIME_HOST}:${DEV_PORT}"
+                                ENV_FILE="$(mktemp)"
+                                chmod 600 "$ENV_FILE"
 
-                            echo "Testing Dev: ${BASE_URL}"
+                                trap 'rm -f "$ENV_FILE"' EXIT
 
-                            BASE_URL="$BASE_URL" ./tests/run-tests.sh
-                        '''
+                                printf '%s\\n' \
+                                    "WORDPRESS_DB_NAME=wordpress" \
+                                    "WORDPRESS_DB_USER=wordpress" \
+                                    "WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}" \
+                                    "WORDPRESS_DB_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}" \
+                                    "" \
+                                    "PRESTASHOP_DB_NAME=prestashop" \
+                                    "PRESTASHOP_DB_USER=prestashop" \
+                                    "PRESTASHOP_DB_PASSWORD=${PRESTASHOP_DB_PASSWORD}" \
+                                    "PRESTASHOP_DB_ROOT_PASSWORD=${PRESTASHOP_DB_ROOT_PASSWORD}" \
+                                    "" \
+                                    "APP_PORT=${DEV_PORT}" \
+                                    "SERVER_HOST=${RUNTIME_HOST}:${DEV_PORT}" \
+                                    > "$ENV_FILE"
+
+                                export BASE_URL="http://${RUNTIME_HOST}:${DEV_PORT}"
+                                export RUNTIME_PROJECT_NAME="${DEV_PROJECT}"
+                                export RUNTIME_ENV_FILE="$ENV_FILE"
+
+                                echo "Testing Compose Dev: ${BASE_URL}"
+
+                                ./tests/run-python-tests.sh runtime
+                                mv reports/runtime.xml reports/runtime-compose-dev.xml
+
+                                ./tests/run-python-tests.sh integration
+
+                                ./tests/run-python-tests.sh network
+                            '''
+                        }
                     }
                 }
             }
@@ -577,16 +661,28 @@ pipeline {
                 sh '''#!/usr/bin/env bash
                     set -euo pipefail
 
+                    source .venv/bin/activate
+
                     chmod +x tests/kubernetes/validate-deployment.sh
+
+                    BASE_URL="http://${K8S_HOST}:30080"
 
                     ./tests/kubernetes/validate-deployment.sh \
                         liora-dev \
-                        http://${K8S_HOST}:30080
+                        "$BASE_URL"
+
+                    echo "Running Python runtime tests against Kubernetes Dev."
+
+                    BASE_URL="$BASE_URL" \
+                        ./tests/run-python-tests.sh runtime
+
+                    mv reports/runtime.xml \
+                        reports/runtime-kubernetes-dev.xml
                 '''
             }
         }
 
-        /*
+       /*
         * Deploys the monitoring stack after the Kubernetes Dev deployment.
         */
         stage('Deploy Monitoring') {
@@ -678,11 +774,23 @@ pipeline {
                         sh '''#!/usr/bin/env bash
                             set -euo pipefail
 
+                            source .venv/bin/activate
+
                             chmod +x tests/kubernetes/validate-deployment.sh
+
+                            BASE_URL="http://${K8S_HOST}:30081"
 
                             ./tests/kubernetes/validate-deployment.sh \
                                 liora-staging \
-                                http://${K8S_HOST}:30081
+                                "$BASE_URL"
+
+                            echo "Running Python runtime tests against Kubernetes Staging."
+
+                            BASE_URL="$BASE_URL" \
+                                ./tests/run-python-tests.sh runtime
+
+                            mv reports/runtime.xml \
+                                reports/runtime-kubernetes-staging.xml
                         '''
                     }
                 }
@@ -771,11 +879,23 @@ pipeline {
                         sh '''#!/usr/bin/env bash
                             set -euo pipefail
 
+                            source .venv/bin/activate
+
                             chmod +x tests/kubernetes/validate-deployment.sh
+
+                            BASE_URL="http://${K8S_HOST}:30082"
 
                             ./tests/kubernetes/validate-deployment.sh \
                                 liora-prod \
-                                http://${K8S_HOST}:30082
+                                "$BASE_URL"
+
+                            echo "Running Python runtime tests against Kubernetes Production."
+
+                            BASE_URL="$BASE_URL" \
+                                ./tests/run-python-tests.sh runtime
+
+                            mv reports/runtime.xml \
+                                reports/runtime-kubernetes-prod.xml
                         '''
                     }
                 }
@@ -800,13 +920,14 @@ pipeline {
         }
 
         always {
+            junit allowEmptyResults: true,
+                testResults: 'reports/*.xml'
+
             sh '''#!/usr/bin/env bash
                 set +e
 
                 docker logout >/dev/null 2>&1 || true
 
-                # Cleanup files from the previous pipeline
-                # implementation if they still exist.
                 rm -f \
                     .env.dev.ci \
                     .env.staging.ci \
